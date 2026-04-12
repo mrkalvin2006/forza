@@ -7,9 +7,9 @@ import { generateWhatsAppLink, getDaysRemaining } from '../utils';
 import MemberModal from './MemberModal';
 import { supabase } from '../supabase';
 
-// --- IMPORTACIÓN DE ASSETS PARA EL NUEVO DISEÑO ---
-import ForzaLogo from '../assets/logo-forza.png'; // Tu logo VIP
-import GymBackground from '../assets/gym-background.png'; // Tu imagen moderna de gimnasio
+// --- ASSETS ---
+import ForzaLogo from '../assets/logo-forza.png';
+import GymBackground from '../assets/gym-background.png';
 
 export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [members, setMembers] = useState<Member[]>([]);
@@ -67,14 +67,14 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     setDeleteConfirmation({ isOpen: false, member: null });
   };
 
-  // --- LÓGICA DE STATS (NO TOCAR) ---
+  // --- STATS ---
   const stats = {
     total: members.length,
     active: members.filter(m => getDaysRemaining(m.endDate) >= 0).length,
     expiringSoon: members.filter(m => { const days = getDaysRemaining(m.endDate); return days >= 0 && days <= 30; }).length
   };
 
-  // --- LÓGICA DE FILTROS (NO TOCAR) ---
+  // --- FILTROS ---
   const filteredMembers = members.filter(member => {
     const fullName = `${member.firstName} ${member.lastName} ${member.dni}`.toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase());
@@ -86,25 +86,21 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   });
 
   return (
-    // CONTENEDOR PRINCIPAL CON EL FONDO DEL LOGIN (VIP Gym)
     <div 
       className="min-h-screen bg-black text-zinc-100 font-sans pb-10 relative overflow-hidden bg-cover bg-center"
       style={{ backgroundImage: `url(${GymBackground})` }}
     >
-      {/* Superposición negra translúcida (VIP Glass) */}
+      {/* VIP Glass Overlay */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] z-0" />
 
-      {/* CABECERA VIP CON LOGO Y EFECTOS */}
+      {/* CABECERA VIP */}
       <header className="border-b border-zinc-800/60 bg-black/70 backdrop-blur-2xl sticky top-0 z-40 relative shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
-        {/* Destello dorado sutil en la parte inferior de la cabecera */}
+        {/* Destello dorado sutil */}
         <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-[linear-gradient(90deg,transparent_0%,#EAB308_50%,transparent_100%)] opacity-30" />
         
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between relative z-10">
           <div className="flex items-center gap-4 relative">
-            {/* LOGO DE FORZA CLUB GYM */}
             <img src={ForzaLogo} alt="Logo Forza" className="max-h-14 w-auto drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]" />
-            
-            {/* EFECTO DE LUZ DORADA SUTIL RECORRIENDO EL TÍTULO */}
             <div className="relative">
               <div className="absolute top-1/2 left-0 -translate-y-1/2 w-48 h-12 bg-yellow-500/5 rounded-full blur-xl scale-110" />
               <h1 className="text-xl font-black tracking-tighter uppercase relative z-10 text-white flex items-center gap-3">
@@ -114,16 +110,13 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             </div>
           </div>
           
-          <div className="flex items-center gap-5">
-            {/* BOTÓN CON EFECTO GLOW SUTIL (NO TOCAR FUNCIONALIDAD) */}
+          <div className="flex items-center gap-5 relative z-10">
             <button 
               onClick={() => { setEditingMember(null); setIsModalOpen(true); }}
               className="bg-white text-black px-6 py-2.5 rounded-xl font-black flex items-center gap-2 hover:bg-yellow-500 hover:text-white transition-all shadow-[0_0_20px_rgba(255,255,255,0.15)] active:scale-95 text-xs uppercase tracking-widest"
             >
               <Plus size={18}/> Nueva Matrícula
             </button>
-            
-            {/* SALIR CON EFECTO HOVER VIP */}
             <button onClick={onLogout} className="group p-2.5 text-zinc-500 hover:text-white hover:bg-zinc-800/50 rounded-full transition-all flex items-center gap-2">
               <LogOut size={20}/>
               <span className="text-xs font-bold uppercase tracking-widest group-hover:block hidden transition-all">Salir</span>
@@ -134,32 +127,41 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
 
       <main className="max-w-7xl mx-auto p-6 relative z-10">
         
-        {/* STATS (NO TOCAR) */}
+        {/* STATS */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <div className="bg-zinc-900/40 border border-zinc-800/60 p-6 rounded-3xl backdrop-blur-sm shadow-inner relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 rounded-full -translate-y-8 translate-x-8 blur-3xl"/>
             <div className="flex items-center gap-4 relative z-10">
               <div className="p-3 bg-zinc-800 rounded-2xl text-zinc-400"><Users size={24}/></div>
-              <div><p className="text-xs font-black text-zinc-500 uppercase tracking-widest">Total VIPs</p><p className="text-2xl font-bold">{isLoading ? '...' : stats.total}</p></div>
+              <div>
+                {/* TÍTULO AMARILLO */}
+                <p className="text-xs font-black text-yellow-500 uppercase tracking-widest">Total VIPs</p>
+                <p className="text-2xl font-bold">{isLoading ? '...' : stats.total}</p>
+              </div>
             </div>
           </div>
           <div className="bg-zinc-900/40 border border-zinc-800/60 p-6 rounded-3xl backdrop-blur-sm shadow-inner relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full -translate-y-8 translate-x-8 blur-3xl"/>
             <div className="flex items-center gap-4 relative z-10">
               <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500">< ShieldCheck size={24}/></div>
-              <div><p className="text-xs font-black text-zinc-500 uppercase tracking-widest">Suscripciones Activas</p><p className="text-2xl font-bold text-emerald-400">{isLoading ? '...' : stats.active}</p></div>
+              <div>
+                {/* TÍTULO AMARILLO */}
+                <p className="text-xs font-black text-yellow-500 uppercase tracking-widest">Suscripciones Activas</p>
+                <p className="text-2xl font-bold text-emerald-400">{isLoading ? '...' : stats.active}</p>
+              </div>
             </div>
           </div>
           <div className="bg-zinc-900/40 border border-zinc-800/60 p-6 rounded-3xl backdrop-blur-sm shadow-inner relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full -translate-y-8 translate-x-8 blur-3xl"/>
             <div className="flex items-center gap-4 relative z-10">
               <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500"><AlertTriangle size={24}/></div>
-              <div><p className="text-xs font-black text-zinc-500 uppercase tracking-widest">Renovación Pendiente</p><p className="text-2xl font-bold text-blue-400">{isLoading ? '...' : stats.expiringSoon}</p></div>
+              <div>
+                {/* TÍTULO AMARILLO */}
+                <p className="text-xs font-black text-yellow-500 uppercase tracking-widest">Renovación Pendiente</p>
+                <p className="text-2xl font-bold text-blue-400">{isLoading ? '...' : stats.expiringSoon}</p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* BUSCADOR Y FILTRO VIP */}
+        {/* BUSCADOR */}
         <div className="flex flex-col md:flex-row gap-4 mb-8 items-center justify-between">
           <div className="flex gap-2 bg-zinc-900/80 p-1.5 rounded-2xl border border-zinc-800 shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)]">
             <button onClick={() => setFilter('all')} className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-tighter transition-all ${filter === 'all' ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>Todos</button>
@@ -175,16 +177,15 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         </div>
 
-        {/* TABLA CON EFECTOS VIP Y SEMÁFORO (NO TOCAR FUNCIONALIDAD) */}
-        <div className="bg-zinc-900/20 border border-zinc-800 rounded-[2rem] overflow-hidden backdrop-blur-md shadow-[0_10px_40px_rgba(0,0,0,0.2)]">
-          <div className="overflow-x-auto relative">
-            
-            {/* Destello dorado sutil recorriendo el borde de la tabla (efecto VIP) */}
-            <motion.div animate={{ rotate: 360 }} transition={{ duration: 6, repeat: Infinity, ease: "linear" }} style={{ width: '200%', height: '200%' }} className="absolute -inset-1/2 z-0 opacity-10 bg-[conic-gradient(from_0deg,transparent_0deg,transparent_150deg,#EAB308_180deg,transparent_210deg,transparent_360deg)]" />
-
+        {/* TABLA - EFECTO ELIMINADO */}
+        <div className="bg-zinc-900/20 border border-zinc-800 rounded-[2rem] overflow-hidden backdrop-blur-md shadow-[0_10px_40px_rgba(0,0,0,0.2)] relative">
+          
+          {/* ELIMINACIÓN DE BARRAS DE NAVEGACIÓN (Tailwind utility) */}
+          <div className="overflow-x-auto scrollbar-hide">
             <table className="w-full text-left border-collapse relative z-10">
               <thead>
-                <tr className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.2em] border-b border-zinc-800/50">
+                {/* TÍTULOS AMARILLOS */}
+                <tr className="text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] border-b border-zinc-800/50">
                   <th className="px-8 py-6">Alumno / DNI</th>
                   <th className="px-8 py-6">Plan / Inversión</th>
                   <th className="px-8 py-6">Matrícula y Fin</th>
@@ -208,7 +209,6 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                             <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[10px] font-black">Suscripción Vencida</span>
                           ) : (
                             <div className="flex items-center gap-2">
-                              {/* Efecto de luz dorada pulsante para los que están por vencer */}
                               <div className={`size-2 rounded-full shadow-[0_0_8px] ${days <= 7 ? 'bg-amber-500 animate-pulse shadow-amber-500/50' : 'bg-emerald-500 shadow-emerald-500/50'}`} />
                               <span className={`text-xs font-black ${days <= 7 ? 'text-amber-500' : 'text-emerald-400'}`}>{days} días</span>
                             </div>
@@ -233,7 +233,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
 
       <MemberModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveMember} initialData={editingMember} />
 
-      {/* CONFIRMACIÓN DE ELIMINACIÓN CON ESTILO VIP (NO TOCAR FUNCIONALIDAD) */}
+      {/* CONFIRMACIÓN DE ELIMINACIÓN */}
       <AnimatePresence>
         {deleteConfirmation.isOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
