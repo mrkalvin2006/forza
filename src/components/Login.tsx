@@ -1,6 +1,6 @@
 // src/components/Login.tsx
 import React, { useState } from 'react';
-import { User, Lock, ArrowRight, Dumbbell, Loader2 } from 'lucide-react';
+import { User, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase } from '../supabase'; // Asegúrate de tener tu archivo supabase.ts listo
 
@@ -27,7 +27,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     try {
       // CONSULTA REAL A SUPABASE: Verifica usuario y contraseña en la tabla 'users'
-      // Nota: En un sistema real, usaríamos supabase.auth.signInWithPassword para hash seguro.
       const { data, error: dbError } = await supabase
         .from('users')
         .select('*')
@@ -40,7 +39,6 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         setError(true);
       } else {
         // ¡Éxito! Supabase auth listener en App.tsx detectará el cambio automáticamente
-        //onLogin(); // Ya no es necesario llamarlo aquí
       }
     } catch (err) {
       console.error("Error completo en login:", err);
@@ -56,45 +54,48 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       className="min-h-screen flex items-center justify-center antialiased relative overflow-hidden bg-cover bg-center"
       style={{ backgroundImage: `url(${GymBackground})` }}
     >
-      {/* SUPERPOSICIÓN MODERNA CON MÁS BRILLO (Menor opacidad y menor blur)
-         bg-black/40 es más brillante que bg-black/60.
-         backdrop-blur-[2px] es un desenfoque sutil que deja ver la imagen.
+      {/* SUPERPOSICIÓN MODERNA CON MÁS BRILLO Y PATRÓN SUTIL
+         bg-black/10 es translúcido, dejando ver la imagen de fondo.
+         Un patrón de puntos sutil añade textura sin oscurecer.
       */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] z-0" />
+      <div className="absolute inset-0 bg-black/10 z-0">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48ZyBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiM5QzlDOTkiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTAgMGg0MHY0MEgwVjB6bTIwIDIwaDIwdjIwSDIWMjB6TTAgMjBoMjB2MjBIMFYyMHoyMCAwaDIwdjIwSDIwVjB6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20" />
+      </div>
 
-      {/* TARJETA DE LOGIN CON EFECTO VIDRIO (Glassmorphism)
-         El panel de login ahora encima de la superposición (z-10)
-         bg-white/10 es translúcido.
-         backdrop-blur-xl es un desenfoque fuerte detrás del panel.
-         border-white/20 es un borde brillante sutil.
+      {/* TARJETA DE LOGIN CON EFECTO VIDRIO NEGRO (Negro Glassmorphism)
+         El panel de login ahora es más translúcido (bg-black/40) y desenfocado (backdrop-blur-2xl).
+         Sombra sutil para darle profundidad.
+         border-zinc-800/50 es un borde sutil pero moderno.
       */}
       <motion.div
-        initial={{ opacity: 0, y: -30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className="relative z-10 w-full max-w-md p-10 bg-white/10 border border-white/20 rounded-3xl shadow-[0_8px_32px_0_rgba(255,255,255,0.1)] backdrop-blur-xl"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+        className="relative z-10 w-full max-w-md p-12 bg-black/40 border border-zinc-800/50 rounded-3xl shadow-[0_8px_32px_0_rgba(0,0,0,0.6)] backdrop-blur-2xl"
       >
-        <div className="flex flex-col items-center gap-10">
+        <div className="flex flex-col items-center gap-12">
           
-          {/* Logo Forza Club Gym */}
-          <div className="w-full flex items-center justify-center">
+          {/* --- LOGO FORZA CLUB GYM GRANDADO Y CON EFECTO --- */}
+          <div className="w-full flex items-center justify-center relative">
+            {/* Efecto de foco sutil detrás del logo */}
+            <div className="absolute inset-0 bg-white/5 rounded-full blur-xl scale-125" />
             <img 
               src={ForzaLogo} 
               alt="Logo Forza Club Gym" 
-              className="max-h-24 w-auto object-contain" 
+              className="max-h-32 w-auto object-contain relative z-10" // Tamaño aumentado a max-h-32
             />
           </div>
 
-          <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
+          <form onSubmit={handleSubmit} className="w-full flex flex-col gap-8">
             
             {/* Campo Usuario */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               <label className="text-sm font-medium text-zinc-300" htmlFor="username">
                 Usuario
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User className="size-5 text-zinc-400" />
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors group-focus-within:text-white">
+                  <User className="size-5 text-zinc-500" />
                 </div>
                 <input
                   type="text"
@@ -102,20 +103,20 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="admin"
-                  className="w-full pl-12 pr-4 py-3.5 bg-zinc-950/70 border border-zinc-700/50 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600 transition"
+                  className="w-full pl-12 pr-4 py-4 bg-zinc-950/70 border border-zinc-700/50 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-white transition group-focus-within:border-white"
                   required
                 />
               </div>
             </div>
 
             {/* Campo Contraseña */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               <label className="text-sm font-medium text-zinc-300" htmlFor="password">
                 Contraseña
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="size-5 text-zinc-400" />
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors group-focus-within:text-white">
+                  <Lock className="size-5 text-zinc-500" />
                 </div>
                 <input
                   type="password"
@@ -123,7 +124,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-12 pr-4 py-3.5 bg-zinc-950/70 border border-zinc-700/50 rounded-xl text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600 transition"
+                  className="w-full pl-12 pr-4 py-4 bg-zinc-950/70 border border-zinc-700/50 rounded-xl text-white placeholder-zinc-600 focus:outline-none focus:ring-2 focus:ring-white transition group-focus-within:border-white"
                   required
                 />
               </div>
@@ -140,13 +141,13 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
               </motion.p>
             )}
 
-            {/* BOTÓN INGRESAR CON ESTADO DE CARGA */}
+            {/* BOTÓN INGRESAR CON ESTADO DE CARGA Y EFECTO MODERNO */}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               disabled={isLoading}
               type="submit"
-              className="w-full mt-2 flex items-center justify-center gap-3 py-4 bg-white text-black rounded-xl font-semibold text-base shadow-lg hover:bg-zinc-100 transition duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full mt-4 flex items-center justify-center gap-3 py-4 bg-white text-black rounded-xl font-bold text-base shadow-lg hover:bg-zinc-100 transition duration-300 disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>
