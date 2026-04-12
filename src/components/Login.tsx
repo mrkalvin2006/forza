@@ -44,30 +44,24 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
       
-      {/* CONTENEDOR DEL EFECTO DE LUZ DORADA PERIMETRAL */}
+      {/* CONTENEDOR DE LUZ DORADA PERIMETRAL */}
       <div className="relative p-[3px] rounded-[2.6rem] overflow-hidden flex items-center justify-center">
-        {/* LA LUZ DORADA QUE RECORRE EL BORDE */}
+        {/* LUZ DORADA RECORRIENDO EL BORDE */}
         <motion.div
-          animate={{
-            rotate:,
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-          style={{ width: '200%', height: '200%' }}
-          className="absolute z-0 bg-[conic-gradient(from_0deg,transparent_0deg,transparent_150deg,#EAB308_180deg,transparent_210deg,transparent_360deg)]"
+          animate={{ rotate: 360 }}
+          transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+          style={{ width: '210%', height: '210%', position: 'absolute' }}
+          className="z-0 bg-[conic-gradient(from_0deg,transparent_0deg,transparent_150deg,#EAB308_180deg,transparent_210deg,transparent_360deg)]"
         />
 
-        {/* VENTANA DE LOGIN (ESTA VA ENCIMA DE LA LUZ) */}
+        {/* VENTANA DE LOGIN NEGRO GLASS */}
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }} 
           animate={{ opacity: 1, scale: 1 }}
           className="relative z-10 w-full max-w-md p-10 bg-black/90 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.8)]"
         >
           <div className="flex flex-col items-center gap-10">
-            {/* LOGO EXPANDIDO */}
+            {/* LOGO */}
             <motion.div initial={{ y: -20 }} animate={{ y: 0 }} className="relative">
               <div className="absolute inset-0 bg-yellow-500/10 blur-[40px] rounded-full scale-150" />
               <img 
@@ -86,7 +80,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                     type="text" 
                     value={username} 
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl pl-12 py-4 text-white outline-none focus:border-yellow-500/50 transition-all placeholder:text-zinc-700 font-medium"
+                    className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl pl-12 py-4 text-white outline-none focus:border-yellow-500/50 transition-all font-medium"
                     placeholder="Usuario" 
                     required 
                   />
@@ -99,7 +93,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                   type="password" 
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl pl-12 py-4 text-white outline-none focus:border-yellow-500/50 transition-all placeholder:text-zinc-700 font-medium"
+                  className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl pl-12 py-4 text-white outline-none focus:border-yellow-500/50 transition-all font-medium"
                   placeholder="Contraseña" 
                   required 
                 />
