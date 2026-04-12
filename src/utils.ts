@@ -1,13 +1,11 @@
 // src/utils.ts
 import { PlanType, PLAN_DETAILS } from './types';
 
-/**
- * Convierte una fecha de YYYY-MM-DD a DD-MM-YYYY (A prueba de errores)
- */
 export function formatDate(dateString: any): string {
   if (!dateString || typeof dateString !== 'string') return "Sin fecha";
   try {
-    const cleanDate = dateString.split('T'); // Previene errores si viene con hora
+    // OBLIGATORIO
+    const cleanDate = dateString.split('T'); 
     const [year, month, day] = cleanDate.split("-");
     return `${day}-${month}-${year}`;
   } catch (error) {
@@ -15,13 +13,11 @@ export function formatDate(dateString: any): string {
   }
 }
 
-/**
- * Convierte una fecha a formato amigable: 03 marzo-2026 (A prueba de errores)
- */
 export function formatFriendlyDate(dateString: any): string {
   if (!dateString || typeof dateString !== 'string') return "Sin fecha";
   try {
-    const cleanDate = dateString.split('T'); // Previene errores si viene con hora
+    // OBLIGATORIO
+    const cleanDate = dateString.split('T'); 
     const [year, month, day] = cleanDate.split("-");
     const months = [
       "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -35,22 +31,27 @@ export function formatFriendlyDate(dateString: any): string {
 }
 
 export function calculateEndDate(startDateStr: string, plan: PlanType): string {
-  if (!startDateStr) return new Date().toISOString().split('T');
+  // OBLIGATORIO Y VALIDACIÓN
+  if (!startDateStr) return ""; 
   
-  const date = new Date(startDateStr);
-  const details = PLAN_DETAILS[plan];
+  try {
+    const date = new Date(startDateStr);
+    const details = PLAN_DETAILS[plan];
 
-  if (details.durationDays) {
-    date.setDate(date.getDate() + details.durationDays);
-  } else if (details.durationMonths) {
-    date.setMonth(date.getMonth() + details.durationMonths);
+    if (details.durationDays) {
+      date.setDate(date.getDate() + details.durationDays);
+    } else if (details.durationMonths) {
+      date.setMonth(date.getMonth() + details.durationMonths);
+    }
+
+    // OBLIGATORIO
+    return date.toISOString().split('T');
+  } catch (error) {
+    return "";
   }
-
-  return date.toISOString().split('T');
 }
 
 export function generateWhatsAppLink(member: { firstName: string; lastName: string; phone: string; startDate: string; endDate: string }) {
-  // Aseguramos que phone sea un string antes de hacer replace
   const rawPhone = member.phone ? String(member.phone) : '';
   const phone = rawPhone.replace(/\D/g, '');
   
@@ -65,6 +66,7 @@ export function generateWhatsAppLink(member: { firstName: string; lastName: stri
 export function getDaysRemaining(endDateStr: any): number {
   if (!endDateStr || typeof endDateStr !== 'string') return 0;
   
+  // OBLIGATORIO
   const cleanDate = endDateStr.split('T');
   const today = new Date();
   today.setHours(0, 0, 0, 0);

@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, CalendarDays, UserSquare2, ChevronsUpDown, PhoneForwarded } from 'lucide-react';
 import { Member, PlanType, PLAN_DETAILS } from '../types';
-// IMPORTANTE: Importamos formatFriendlyDate para la vista del campo bloqueado
 import { calculateEndDate, formatFriendlyDate } from '../utils';
 
 interface MemberModalProps {
@@ -20,7 +19,7 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
     dni: '',
     phone: '',
     plan: '1_month' as PlanType,
-    // CORREGIDO: Añadido para que sea texto puro
+    // ES OBLIGATORIO AQUÍ
     startDate: new Date().toISOString().split('T'),
   });
 
@@ -43,7 +42,7 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
         dni: '',
         phone: '',
         plan: '1_month',
-        // CORREGIDO: Añadido
+        // ES OBLIGATORIO AQUÍ
         startDate: new Date().toISOString().split('T'),
       });
     }
@@ -172,7 +171,6 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">3. Finalización (Automático)</label>
                 <div className="w-full px-4 py-3.5 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-400 font-black flex justify-between items-center opacity-70">
-                  {/* CORRECCIÓN: Aplicamos formatFriendlyDate para que se vea amigable */}
                   <span>{formatFriendlyDate(computedEndDate)}</span>
                   <CalendarDays size={18} className="text-zinc-700" />
                 </div>
