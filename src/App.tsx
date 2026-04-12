@@ -1,57 +1,31 @@
 // src/App.tsx
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
-import { supabase } from './supabase'; // Asegúrate de tener tu archivo supabase.ts listo
 
 function App() {
-  // Estado para saber si el usuario está autenticado
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  // Este es el interruptor: false = Login, true = Dashboard
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Verificamos si hay una sesión activa al cargar la app
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
-    }
-    checkSession();
+  // Esta función se ejecuta cuando el Login tiene éxito
+  const handleLoginSuccess = () => {
+    console.log("Cambiando a Dashboard...");
+    setIsAuthenticated(true);
+  };
 
-    // Escuchamos cambios en la autenticación (login/logout)
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
-    });
-
-    // Limpiamos el listener al desmontar el componente
-    return () => {
-      authListener.subscription.unsubscribe();
-    }
-  }, []);
-
-  // Función para manejar el cierre de sesión
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
+  // Esta función limpia el estado para volver al Login
+  const handleLogout = () => {
     setIsAuthenticated(false);
   };
 
-  // Mientras verificamos la sesión, podemos mostrar una pantalla de carga sutil
-  if (isAuthenticated === null) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-500">
-        Cargando Forza Club...
-      </div>
-    );
-  }
-
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100 antialiased">
-      {/* Renderizado Condicional Único:
-         Si NO está autenticado, muestra SOLO el Login.
-         Si SÍ está autenticado, muestra SOLO el Dashboard.
-      */}
+    <main className="min-h-screen bg-black">
+      {/* LÓGICA DE INTERRUPTOR */}
       {!isAuthenticated ? (
-        // Pasamos la función onLogin vacía porque Supabase maneja el estado internamente
-        <Login onLogin={() => {}} /> 
+        // Le pasamos la función al prop 'onLogin' que espera tu Login.tsx
+        <Login onLogin={handleLoginSuccess} />
       ) : (
+        // Cuando sea true, se borra el Login y aparece el Dashboard
         <Dashboard onLogout={handleLogout} />
       )}
     </main>
