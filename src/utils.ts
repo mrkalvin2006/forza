@@ -1,4 +1,14 @@
+// src/utils.ts
 import { PlanType, PLAN_DETAILS } from './types';
+
+/**
+ * Convierte una fecha de YYYY-MM-DD a DD-MM-YYYY para mostrar al usuario
+ */
+export function formatDate(dateString: string): string {
+  if (!dateString) return "";
+  const [year, month, day] = dateString.split("-");
+  return `${day}-${month}-${year}`;
+}
 
 export function calculateEndDate(startDateStr: string, plan: PlanType): string {
   const date = new Date(startDateStr);
@@ -10,12 +20,17 @@ export function calculateEndDate(startDateStr: string, plan: PlanType): string {
     date.setMonth(date.getMonth() + details.durationMonths);
   }
 
-  return date.toISOString().split('T')[0];
+  return date.toISOString().split('T');
 }
 
 export function generateWhatsAppLink(member: { firstName: string; lastName: string; phone: string; startDate: string; endDate: string }) {
   const phone = member.phone.replace(/\D/g, '');
-  const message = `¡Hola ${member.firstName} ${member.lastName}! 🏋️‍♂️\n\nQueremos agradecerte por ser parte de *Forza Club*.\n\nTe recordamos los detalles de tu membresía:\n📅 *Fecha de inicio:* ${member.startDate}\n⏳ *Fecha de vencimiento:* ${member.endDate}\n\n¡Sigue dando lo mejor en tus entrenamientos! 💪`;
+  
+  // Usamos formatDate aquí también para que el mensaje de WA sea amigable
+  const start = formatDate(member.startDate);
+  const end = formatDate(member.endDate);
+
+  const message = `¡Hola *${member.firstName} ${member.lastName}*! 🏋️‍♂️\n\nQueremos agradecerte por ser parte de *Forza Club*.\n\nTe recordamos los detalles de tu membresía:\n📅 *Fecha de inicio:* ${start}\n⏳ *Fecha de vencimiento:* ${end}\n\n¡Sigue dando lo mejor en tus entrenamientos! 💪`;
   
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
