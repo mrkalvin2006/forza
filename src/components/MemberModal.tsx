@@ -5,6 +5,16 @@ import { X, CalendarDays, UserSquare2, ChevronsUpDown, PhoneForwarded } from 'lu
 import { Member, PlanType, PLAN_DETAILS } from '../types';
 import { calculateEndDate, formatFriendlyDate } from '../utils';
 
+// NUEVO: Función segura para obtener la fecha local de hoy (YYYY-MM-DD)
+// Esto evita problemas de zona horaria y arregla el calendario vacío.
+const getTodayString = () => {
+  const date = new Date();
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
 interface MemberModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -19,8 +29,8 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
     dni: '',
     phone: '',
     plan: '1_month' as PlanType,
-    // ES OBLIGATORIO AQUÍ
-    startDate: new Date().toISOString().split('T'),
+    // CORREGIDO: Usamos getTodayString() en lugar de split('T')
+    startDate: getTodayString(),
   });
 
   const [computedEndDate, setComputedEndDate] = useState('');
@@ -42,8 +52,8 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
         dni: '',
         phone: '',
         plan: '1_month',
-        // ES OBLIGATORIO AQUÍ
-        startDate: new Date().toISOString().split('T'),
+        // CORREGIDO: Usamos getTodayString() en lugar de split('T')
+        startDate: getTodayString(),
       });
     }
   }, [initialData, isOpen]);
