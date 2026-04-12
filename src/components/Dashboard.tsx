@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Plus, Edit2, Trash2, MessageCircle, LogOut, Users, CalendarClock, Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Member, PLAN_DETAILS } from '../types';
-import { generateWhatsAppLink, getDaysRemaining, formatDate } from '../utils'; // Asegúrate de haber agregado formatDate en utils
+// ACTUALIZADO: Importamos formatFriendlyDate en lugar de formatDate
+import { generateWhatsAppLink, getDaysRemaining, formatFriendlyDate } from '../utils'; 
 import MemberModal from './MemberModal';
 import { supabase } from '../supabase';
 
@@ -67,14 +68,12 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     setDeleteConfirmation({ isOpen: false, member: null });
   };
 
-  // --- STATS ---
   const stats = {
     total: members.length,
     active: members.filter(m => getDaysRemaining(m.endDate) >= 0).length,
     expiringSoon: members.filter(m => { const days = getDaysRemaining(m.endDate); return days >= 0 && days <= 30; }).length
   };
 
-  // --- FILTROS ---
   const filteredMembers = members.filter(member => {
     const fullName = `${member.firstName} ${member.lastName} ${member.dni}`.toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase());
@@ -90,10 +89,8 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       className="min-h-screen bg-black text-zinc-100 font-sans pb-10 relative overflow-hidden bg-cover bg-center"
       style={{ backgroundImage: `url(${GymBackground})` }}
     >
-      {/* VIP Glass Overlay */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] z-0" />
 
-      {/* CABECERA VIP */}
       <header className="border-b border-zinc-800/60 bg-black/70 backdrop-blur-2xl sticky top-0 z-40 relative shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
         <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-[linear-gradient(90deg,transparent_0%,#EAB308_50%,transparent_100%)] opacity-30" />
         
@@ -176,7 +173,6 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         {/* TABLA - CLEAN UI */}
         <div className="bg-zinc-900/20 border border-zinc-800 rounded-[2rem] overflow-hidden backdrop-blur-md shadow-[0_10px_40px_rgba(0,0,0,0.2)] relative">
           
-          {/* Eliminación de Scrollbar para una vista limpia */}
           <div className="overflow-x-auto scrollbar-hide">
             <table className="w-full text-left border-collapse relative z-10">
               <thead>
@@ -190,21 +186,24 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
               </thead>
               <tbody className="divide-y divide-zinc-800/30">
                 {isLoading ? (
-                  <tr><td colSpan={5} className="py-20 text-center text-zinc-600 font-bold uppercase animate-pulse">Sincronizando...</td></tr>
+                  <tr><td colSpan={5} className="py-20 text-center text-zinc-600 font-bold uppercase animate-pulse">Sincronizando base de datos...</td></tr>
                 ) : filteredMembers.map(member => {
                   const days = getDaysRemaining(member.endDate);
                   return (
                     <tr key={member.id} className="hover:bg-white/[0.02] transition-colors group">
                       <td className="px-8 py-6 font-bold text-white">{member.firstName} {member.lastName} <p className="text-[10px] text-zinc-600 font-mono mt-1">{member.dni}</p></td>
                       <td className="px-8 py-6"><span className="bg-zinc-800 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border border-zinc-700">{PLAN_DETAILS[member.plan]?.label}</span></td>
+                      
+                      {/* COLUMNA ACTUALIZADA: Usando formatFriendlyDate */}
                       <td className="px-8 py-6 text-sm">
-                        <span className="text-zinc-500">{formatDate(member.startDate)}</span> 
-                        <span className="text-white font-bold ml-2">→ {formatDate(member.endDate)}</span>
+                        <span className="text-zinc-500">{formatFriendlyDate(member.startDate)}</span> 
+                        <span className="text-white font-bold ml-2">→ {formatFriendlyDate(member.endDate)}</span>
                       </td>
+
                       <td className="px-8 py-6">
                         <div className="flex justify-center">
                           {days < 0 ? (
-                            <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[10px] font-black">Vencido</span>
+                            <span className="bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-[10px] font-black">Suscripción Vencida</span>
                           ) : (
                             <div className="flex items-center gap-2">
                               <div className={`size-2 rounded-full shadow-[0_0_8px] ${days <= 7 ? 'bg-amber-500 animate-pulse shadow-amber-500/50' : 'bg-emerald-500 shadow-emerald-500/50'}`} />
@@ -231,7 +230,6 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
 
       <MemberModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveMember} initialData={editingMember} />
 
-      {/* CONFIRMACIÓN DE ELIMINACIÓN */}
       <AnimatePresence>
         {deleteConfirmation.isOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">

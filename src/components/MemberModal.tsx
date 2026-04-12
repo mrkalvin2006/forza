@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, CalendarDays, UserSquare2, ChevronsUpDown, PhoneForwarded } from 'lucide-react';
 import { Member, PlanType, PLAN_DETAILS } from '../types';
-import { calculateEndDate } from '../utils';
+// IMPORTANTE: Importamos formatFriendlyDate para la vista del campo bloqueado
+import { calculateEndDate, formatFriendlyDate } from '../utils';
 
 interface MemberModalProps {
   isOpen: boolean;
@@ -19,6 +20,7 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
     dni: '',
     phone: '',
     plan: '1_month' as PlanType,
+    // CORREGIDO: Añadido para que sea texto puro
     startDate: new Date().toISOString().split('T'),
   });
 
@@ -41,6 +43,7 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
         dni: '',
         phone: '',
         plan: '1_month',
+        // CORREGIDO: Añadido
         startDate: new Date().toISOString().split('T'),
       });
     }
@@ -127,13 +130,13 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
               </div>
             </div>
 
-            {/* SECCIÓN PLAN Y FECHAS - NUEVO ORDEN SOLICITADO */}
+            {/* SECCIÓN PLAN Y FECHAS */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
                 <h3 className="text-sm font-black text-emerald-500 uppercase tracking-widest">Plan y Fechas</h3>
               </div>
 
-              {/* 1. FECHA DE INICIO (CALENDARIO) */}
+              {/* 1. FECHA DE INICIO */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">1. Fecha de Inicio</label>
                 <div className="relative">
@@ -169,7 +172,8 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">3. Finalización (Automático)</label>
                 <div className="w-full px-4 py-3.5 bg-zinc-950 border border-zinc-800 rounded-xl text-zinc-400 font-black flex justify-between items-center opacity-70">
-                  <span>{computedEndDate}</span>
+                  {/* CORRECCIÓN: Aplicamos formatFriendlyDate para que se vea amigable */}
+                  <span>{formatFriendlyDate(computedEndDate)}</span>
                   <CalendarDays size={18} className="text-zinc-700" />
                 </div>
               </div>
