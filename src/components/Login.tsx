@@ -46,10 +46,9 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       
       {/* CONTENEDOR CON BORDE ANIMADO DORADO */}
       <div className="relative group p-[2px] rounded-[2.6rem] overflow-hidden">
-        {/* LUZ DORADA CORRIGIENDO EL GIRO (VALORES AÑADIDOS) */}
         <motion.div
           animate={{
-            rotate:, // <-- Aquí estaba el error, ahora corregido
+            rotate:
           }}
           transition={{
             duration: 4,
