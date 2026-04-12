@@ -2,29 +2,41 @@
 import { PlanType, PLAN_DETAILS } from './types';
 
 /**
- * Convierte una fecha de YYYY-MM-DD a DD-MM-YYYY (Numérico estándar)
+ * Convierte una fecha de YYYY-MM-DD a DD-MM-YYYY (A prueba de errores)
  */
-export function formatDate(dateString: string): string {
-  if (!dateString) return "";
-  const [year, month, day] = dateString.split("-");
-  return `${day}-${month}-${year}`;
+export function formatDate(dateString: any): string {
+  if (!dateString || typeof dateString !== 'string') return "Sin fecha";
+  try {
+    const cleanDate = dateString.split('T'); // Previene errores si viene con hora
+    const [year, month, day] = cleanDate.split("-");
+    return `${day}-${month}-${year}`;
+  } catch (error) {
+    return "Error de fecha";
+  }
 }
 
 /**
- * Convierte una fecha a formato amigable: 03 marzo-2026
+ * Convierte una fecha a formato amigable: 03 marzo-2026 (A prueba de errores)
  */
-export function formatFriendlyDate(dateString: string): string {
-  if (!dateString) return "";
-  const [year, month, day] = dateString.split("-");
-  const months = [
-    "enero", "febrero", "marzo", "abril", "mayo", "junio",
-    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
-  ];
-  const monthName = months[parseInt(month) - 1];
-  return `${day} ${monthName}-${year}`;
+export function formatFriendlyDate(dateString: any): string {
+  if (!dateString || typeof dateString !== 'string') return "Sin fecha";
+  try {
+    const cleanDate = dateString.split('T'); // Previene errores si viene con hora
+    const [year, month, day] = cleanDate.split("-");
+    const months = [
+      "enero", "febrero", "marzo", "abril", "mayo", "junio",
+      "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"
+    ];
+    const monthName = months[parseInt(month) - 1];
+    return `${day} ${monthName}-${year}`;
+  } catch (error) {
+    return "Error de fecha";
+  }
 }
 
 export function calculateEndDate(startDateStr: string, plan: PlanType): string {
+  if (!startDateStr) return new Date().toISOString().split('T');
+  
   const date = new Date(startDateStr);
   const details = PLAN_DETAILS[plan];
 
@@ -34,14 +46,14 @@ export function calculateEndDate(startDateStr: string, plan: PlanType): string {
     date.setMonth(date.getMonth() + details.durationMonths);
   }
 
-  // CORRECCIÓN DEFINITIVA: Añadimos para que devuelva solo YYYY-MM-DD
   return date.toISOString().split('T');
 }
 
 export function generateWhatsAppLink(member: { firstName: string; lastName: string; phone: string; startDate: string; endDate: string }) {
-  const phone = member.phone.replace(/\D/g, '');
+  // Aseguramos que phone sea un string antes de hacer replace
+  const rawPhone = member.phone ? String(member.phone) : '';
+  const phone = rawPhone.replace(/\D/g, '');
   
-  // Usamos formatDate para que el mensaje de WA sea claro y profesional
   const start = formatDate(member.startDate);
   const end = formatDate(member.endDate);
 
@@ -50,10 +62,14 @@ export function generateWhatsAppLink(member: { firstName: string; lastName: stri
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
-export function getDaysRemaining(endDateStr: string): number {
+export function getDaysRemaining(endDateStr: any): number {
+  if (!endDateStr || typeof endDateStr !== 'string') return 0;
+  
+  const cleanDate = endDateStr.split('T');
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const endDate = new Date(endDateStr);
+  
+  const endDate = new Date(cleanDate);
   endDate.setHours(0, 0, 0, 0);
   
   const diffTime = endDate.getTime() - today.getTime();
