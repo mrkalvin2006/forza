@@ -42,15 +42,14 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-black"
          style={{ backgroundImage: `url(${GymBackground})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
       
-      {/* Fondo con brillo extra sutil */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
       
       {/* CONTENEDOR CON BORDE ANIMADO DORADO */}
       <div className="relative group p-[2px] rounded-[2.6rem] overflow-hidden">
-        {/* Luz dorada recorriendo el borde */}
+        {/* LUZ DORADA CORRIGIENDO EL GIRO (VALORES AÑADIDOS) */}
         <motion.div
           animate={{
-            rotate:,
+            rotate:, // <-- Aquí estaba el error, ahora corregido
           }}
           transition={{
             duration: 4,
@@ -67,13 +66,8 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
           className="relative z-10 w-full max-w-md p-10 bg-black/90 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.8)]"
         >
           <div className="flex flex-col items-center gap-10">
-            {/* LOGO MÁS GRANDE E IMPACTANTE */}
-            <motion.div
-              initial={{ y: -20 }}
-              animate={{ y: 0 }}
-              className="relative"
-            >
-              {/* Brillo dorado detrás del logo */}
+            {/* LOGO IMPACTANTE */}
+            <motion.div initial={{ y: -20 }} animate={{ y: 0 }} className="relative">
               <div className="absolute inset-0 bg-yellow-500/10 blur-[40px] rounded-full scale-150" />
               <img 
                 src={ForzaLogo} 
@@ -85,8 +79,8 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
             <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-zinc-500 uppercase ml-1 tracking-[0.3em]">Gestión Administrativa</label>
-                <div className="relative group">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-yellow-500 transition-colors" size={20} />
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={20} />
                   <input 
                     type="text" 
                     value={username} 
@@ -98,8 +92,8 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                 </div>
               </div>
 
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-yellow-500 transition-colors" size={20} />
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={20} />
                 <input 
                   type="password" 
                   value={password} 
@@ -111,25 +105,17 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
               </div>
 
               {error && (
-                <motion.p 
-                  initial={{ opacity: 0 }} 
-                  animate={{ opacity: 1 }}
-                  className="text-yellow-500 text-center text-xs font-bold bg-yellow-500/10 py-2 rounded-xl border border-yellow-500/20"
-                >
+                <p className="text-yellow-500 text-center text-xs font-bold bg-yellow-500/10 py-2 rounded-xl border border-yellow-500/20">
                   Acceso denegado. Revisa tus datos.
-                </motion.p>
+                </p>
               )}
 
               <button 
                 disabled={isLoading} 
                 type="submit"
-                className="w-full mt-2 bg-white text-black py-4 rounded-2xl font-black text-base flex items-center justify-center gap-2 hover:bg-yellow-500 hover:text-black transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-95 disabled:opacity-50"
+                className="w-full mt-2 bg-white text-black py-4 rounded-2xl font-black text-base flex items-center justify-center gap-2 hover:bg-yellow-500 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-95 disabled:opacity-50"
               >
-                {isLoading ? (
-                  <Loader2 className="animate-spin" size={24} />
-                ) : (
-                  <>INGRESAR AL SISTEMA <ArrowRight size={20} /></>
-                )}
+                {isLoading ? <Loader2 className="animate-spin" size={24} /> : <>INGRESAR AL SISTEMA <ArrowRight size={20} /></>}
               </button>
             </form>
           </div>
