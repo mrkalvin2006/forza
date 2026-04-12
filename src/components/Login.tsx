@@ -1,3 +1,4 @@
+// src/components/Login.tsx
 import React, { useState } from 'react';
 import { User, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -13,39 +14,25 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Verificación básica antes de llamar a la red
-    if (!username || !password) return;
-
     setIsLoading(true);
     setError(false);
 
     try {
-      // 1. Verificar si las variables de Supabase existen
-      if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        throw new Error("Faltan las variables de entorno (URL o KEY) de Supabase");
-      }
-
-      // 2. Consulta a la base de datos
       const { data, error: dbError } = await supabase
         .from('users')
-        .select('username, password')
+        .select('*')
         .eq('username', username.trim())
         .eq('password', password.trim())
         .maybeSingle();
 
       if (dbError) throw dbError;
-
       if (!data) {
         setError(true);
-        console.log("Credenciales no encontradas en la tabla users");
       } else {
-        console.log("Login exitoso");
         onLogin();
       }
-    } catch (err: any) {
-      console.error("Error detallado:", err);
-      alert(`ERROR: ${err.message || "No se pudo conectar con Supabase"}`);
+    } catch (err) {
+      setError(true);
     } finally {
       setIsLoading(false);
     }
@@ -54,59 +41,100 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-black"
          style={{ backgroundImage: `url(${GymBackground})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
       
-      <motion.div 
-        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-        className="relative z-10 w-full max-w-md p-10 bg-black/80 backdrop-blur-2xl border border-zinc-800 rounded-[2.5rem] shadow-2xl"
-      >
-        <div className="flex flex-col items-center gap-8">
-          <img src={ForzaLogo} alt="Logo" className="max-h-28 w-auto drop-shadow-2xl" />
-          
-          <form onSubmit={handleSubmit} className="w-full flex flex-col gap-5">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-zinc-500 uppercase ml-1 tracking-[0.2em]">Acceso Administrativo</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+      {/* Fondo con brillo extra sutil */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" />
+      
+      {/* CONTENEDOR CON BORDE ANIMADO DORADO */}
+      <div className="relative group p-[2px] rounded-[2.6rem] overflow-hidden">
+        {/* Luz dorada recorriendo el borde */}
+        <motion.div
+          animate={{
+            rotate:,
+          }}
+          transition={{
+            duration: 4,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+          className="absolute inset-[-100%] bg-[conic-gradient(from_0deg,transparent_0deg,transparent_150deg,#EAB308_180deg,transparent_210deg,transparent_360deg)] z-0"
+        />
+
+        {/* VENTANA DE LOGIN NEGRO GLASS */}
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }} 
+          animate={{ opacity: 1, scale: 1 }}
+          className="relative z-10 w-full max-w-md p-10 bg-black/90 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_0_50px_rgba(0,0,0,0.8)]"
+        >
+          <div className="flex flex-col items-center gap-10">
+            {/* LOGO MÁS GRANDE E IMPACTANTE */}
+            <motion.div
+              initial={{ y: -20 }}
+              animate={{ y: 0 }}
+              className="relative"
+            >
+              {/* Brillo dorado detrás del logo */}
+              <div className="absolute inset-0 bg-yellow-500/10 blur-[40px] rounded-full scale-150" />
+              <img 
+                src={ForzaLogo} 
+                alt="Logo Forza" 
+                className="max-h-40 w-auto drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] relative z-10" 
+              />
+            </motion.div>
+            
+            <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-zinc-500 uppercase ml-1 tracking-[0.3em]">Gestión Administrativa</label>
+                <div className="relative group">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-yellow-500 transition-colors" size={20} />
+                  <input 
+                    type="text" 
+                    value={username} 
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl pl-12 py-4 text-white outline-none focus:border-yellow-500/50 transition-all placeholder:text-zinc-700"
+                    placeholder="Usuario" 
+                    required 
+                  />
+                </div>
+              </div>
+
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-yellow-500 transition-colors" size={20} />
                 <input 
-                  type="text" 
-                  value={username} 
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl pl-12 py-4 text-white outline-none focus:border-zinc-500 transition-all placeholder:text-zinc-700"
-                  placeholder="Usuario" 
+                  type="password" 
+                  value={password} 
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl pl-12 py-4 text-white outline-none focus:border-yellow-500/50 transition-all placeholder:text-zinc-700"
+                  placeholder="Contraseña" 
                   required 
                 />
               </div>
-            </div>
 
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
-              <input 
-                type="password" 
-                value={password} 
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl pl-12 py-4 text-white outline-none focus:border-zinc-500 transition-all placeholder:text-zinc-700"
-                placeholder="Contraseña" 
-                required 
-              />
-            </div>
+              {error && (
+                <motion.p 
+                  initial={{ opacity: 0 }} 
+                  animate={{ opacity: 1 }}
+                  className="text-yellow-500 text-center text-xs font-bold bg-yellow-500/10 py-2 rounded-xl border border-yellow-500/20"
+                >
+                  Acceso denegado. Revisa tus datos.
+                </motion.p>
+              )}
 
-            {error && (
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-500 text-center text-xs font-bold bg-red-500/10 py-2 rounded-lg">
-                Usuario o contraseña incorrectos
-              </motion.p>
-            )}
-
-            <button 
-              disabled={isLoading} 
-              type="submit"
-              className="w-full bg-white text-black py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-zinc-200 transition-all disabled:opacity-50 active:scale-[0.98]"
-            >
-              {isLoading ? <Loader2 className="animate-spin" size={20} /> : <>INGRESAR <ArrowRight size={18} /></>}
-            </button>
-          </form>
-        </div>
-      </motion.div>
+              <button 
+                disabled={isLoading} 
+                type="submit"
+                className="w-full mt-2 bg-white text-black py-4 rounded-2xl font-black text-base flex items-center justify-center gap-2 hover:bg-yellow-500 hover:text-black transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] active:scale-95 disabled:opacity-50"
+              >
+                {isLoading ? (
+                  <Loader2 className="animate-spin" size={24} />
+                ) : (
+                  <>INGRESAR AL SISTEMA <ArrowRight size={20} /></>
+                )}
+              </button>
+            </form>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }
