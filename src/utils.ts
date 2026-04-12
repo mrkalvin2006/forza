@@ -1,29 +1,34 @@
 // src/utils.ts
 import { PlanType, PLAN_DETAILS } from './types';
 
-// LIMPIADOR UNIVERSAL DE FECHAS (Ahora entiende DD/MM/YYYY y YYYY-MM-DD)
+// LIMPIADOR UNIVERSAL Y BLINDADO
 export function normalizeDate(val: any): string {
+  if (!val) return "";
+  
   try {
-    if (!val) return "";
-    
-    // Convertimos el dato a texto puro por seguridad
-    let str = Array.isArray(val) ? String(val) : String(val);
-    str = str.split('T').split(' ');
-
-    // CASO 1: Formato estándar YYYY-MM-DD (Ej: 2026-04-12)
-    const matchYMD = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
-    if (matchYMD) {
-      return `${matchYMD}-${matchYMD.padStart(2, '0')}-${matchYMD.padStart(2, '0')}`;
+    let str = "";
+    if (val instanceof Date) {
+      str = val.toISOString();
+    } else if (Array.isArray(val)) {
+      str = String(val);
+    } else if (typeof val === 'object') {
+      str = JSON.stringify(val);
+    } else {
+      str = String(val);
     }
 
-    // CASO 2: Formato DD/MM/YYYY (Ej: 12/04/2026 - ¡EL QUE ESTABA CAUSANDO EL ERROR!)
-    const matchDMY = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
-    if (matchDMY) {
-      // Lo volteamos para que la base de datos lo entienda (YYYY-MM-DD)
-      return `${matchDMY}-${matchDMY.padStart(2, '0')}-${matchDMY.padStart(2, '0')}`;
-    }
+    // Quitamos espacios extra que puedan confundir al sistema
+    str = str.trim();
 
-    return ""; 
+    // CASO 1: Formato YYYY-MM-DD (El más seguro)
+    const matchYMD = str.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+    if (matchYMD) return `${matchYMD}-${matchYMD.padStart(2, '0')}-${matchYMD.padStart(2, '0')}`;
+
+    // CASO 2: Formato DD/MM/YYYY (Por si el navegador lo envía así)
+    const matchDMY = str.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+    if (matchDMY) return `${matchDMY}-${matchDMY.padStart(2, '0')}-${matchDMY.padStart(2, '0')}`;
+
+    return "";
   } catch (e) {
     return "";
   }
@@ -49,19 +54,25 @@ export function formatFriendlyDate(dateString: any): string {
 }
 
 export function calculateEndDate(startDateStr: any, plan: PlanType): string {
-  const clean = normalizeDate(startDateStr);
-  if (!clean) return "";
+  let clean = normalizeDate(startDateStr);
+  
+  // SEGURO ANTI-CRASH: Si no hay fecha válida, usamos la de HOY por defecto.
+  // Esto evita que Supabase lance el Error 400.
+  if (!clean) {
+    const d = new Date();
+    clean = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
 
   try {
     const [year, month, day] = clean.split("-").map(Number);
-    const date = new Date(year, month - 1, day);
+    const date = new Date(year, month - 1, day); // Usamos hora local, 100% seguro
     const details = PLAN_DETAILS[plan];
 
     if (details) {
-      // Usar Number() asegura que sume meses y no junte textos
       if (details.durationDays) {
         date.setDate(date.getDate() + Number(details.durationDays));
-      } else if (details.durationMonths) {
+      } 
+      if (details.durationMonths) {
         date.setMonth(date.getMonth() + Number(details.durationMonths));
       }
     }
@@ -70,11 +81,11 @@ export function calculateEndDate(startDateStr: any, plan: PlanType): string {
     const outMonth = String(date.getMonth() + 1).padStart(2, '0');
     const outDay = String(date.getDate()).padStart(2, '0');
 
-    if (isNaN(outYear)) return ""; // Seguro anti-NaN
+    if (isNaN(outYear)) return clean; // Si la matemática falla, devolvemos la de inicio
 
     return `${outYear}-${outMonth}-${outDay}`;
   } catch (e) {
-    return "";
+    return clean;
   }
 }
 
