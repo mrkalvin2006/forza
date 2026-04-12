@@ -1,120 +1,88 @@
 // src/utils.ts
 import { PlanType, PLAN_DETAILS } from './types';
 
-// LIMPIADOR UNIVERSAL Y BLINDADO
-export function normalizeDate(val: any): string {
-  if (!val) return "";
-  
-  try {
-    let str = "";
-    if (val instanceof Date) {
-      str = val.toISOString();
-    } else if (Array.isArray(val)) {
-      str = String(val);
-    } else if (typeof val === 'object') {
-      str = JSON.stringify(val);
-    } else {
-      str = String(val);
-    }
-
-    // Quitamos espacios extra que puedan confundir al sistema
-    str = str.trim();
-
-    // CASO 1: Formato YYYY-MM-DD (El más seguro)
+// EXTRAE LA FECHA DE FORMA DIRECTA Y SEGURA
+export function getSafeDateString(val: any): string {
+    if (!val) return "";
+    const str = String(val);
+    
     const matchYMD = str.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
     if (matchYMD) return `${matchYMD}-${matchYMD.padStart(2, '0')}-${matchYMD.padStart(2, '0')}`;
-
-    // CASO 2: Formato DD/MM/YYYY (Por si el navegador lo envía así)
+    
     const matchDMY = str.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
     if (matchDMY) return `${matchDMY}-${matchDMY.padStart(2, '0')}-${matchDMY.padStart(2, '0')}`;
-
+    
     return "";
-  } catch (e) {
-    return "";
-  }
 }
 
 export function formatDate(dateString: any): string {
-  const clean = normalizeDate(dateString);
-  if (!clean) return "---";
-  
-  const [year, month, day] = clean.split("-");
-  return `${day}-${month}-${year}`;
+    const clean = getSafeDateString(dateString);
+    if (!clean) return "---";
+    const [y, m, d] = clean.split("-");
+    return `${d}-${m}-${y}`;
 }
 
 export function formatFriendlyDate(dateString: any): string {
-  const clean = normalizeDate(dateString);
-  if (!clean) return "---";
-  
-  const [year, month, day] = clean.split("-");
-  const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-  const monthName = months[parseInt(month, 10) - 1] || month;
-  
-  return `${day} ${monthName}-${year}`;
+    const clean = getSafeDateString(dateString);
+    if (!clean) return "---";
+    const [y, m, d] = clean.split("-");
+    const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+    return `${d} ${months[parseInt(m, 10) - 1] || m}-${y}`;
 }
 
-export function calculateEndDate(startDateStr: any, plan: PlanType): string {
-  let clean = normalizeDate(startDateStr);
-  
-  // SEGURO ANTI-CRASH: Si no hay fecha válida, usamos la de HOY por defecto.
-  // Esto evita que Supabase lance el Error 400.
-  if (!clean) {
-    const d = new Date();
-    clean = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-
-  try {
-    const [year, month, day] = clean.split("-").map(Number);
-    const date = new Date(year, month - 1, day); // Usamos hora local, 100% seguro
-    const details = PLAN_DETAILS[plan];
-
-    if (details) {
-      if (details.durationDays) {
-        date.setDate(date.getDate() + Number(details.durationDays));
-      } 
-      if (details.durationMonths) {
-        date.setMonth(date.getMonth() + Number(details.durationMonths));
-      }
+export function calculateEndDate(startDateStr: any, planStr: any): string {
+    let clean = getSafeDateString(startDateStr);
+    
+    // Si no hay fecha de inicio, forzamos la de hoy
+    if (!clean) {
+        const now = new Date();
+        clean = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
     }
 
-    const outYear = date.getFullYear();
-    const outMonth = String(date.getMonth() + 1).padStart(2, '0');
-    const outDay = String(date.getDate()).padStart(2, '0');
+    try {
+        const [y, m, d] = clean.split("-").map(Number);
+        const date = new Date(y, m - 1, d);
 
-    if (isNaN(outYear)) return clean; // Si la matemática falla, devolvemos la de inicio
+        // Buscamos el plan.
+        const details = PLAN_DETAILS[planStr as PlanType];
+        
+        // EL SEGURO DEFINITIVO: Si el plan no existe o está mal escrito, suma 1 mes por defecto.
+        const addDays = details?.durationDays ? Number(details.durationDays) : 0;
+        const addMonths = details?.durationMonths ? Number(details.durationMonths) : (!details && !addDays ? 1 : 0);
 
-    return `${outYear}-${outMonth}-${outDay}`;
-  } catch (e) {
-    return clean;
-  }
+        if (addDays) date.setDate(date.getDate() + addDays);
+        if (addMonths) date.setMonth(date.getMonth() + addMonths);
+
+        const outY = date.getFullYear();
+        const outM = String(date.getMonth() + 1).padStart(2, '0');
+        const outD = String(date.getDate()).padStart(2, '0');
+
+        return `${outY}-${outM}-${outD}`;
+    } catch (e) {
+        return clean; 
+    }
 }
 
 export function generateWhatsAppLink(member: any) {
-  if (!member) return "";
-  const phone = member.phone ? String(member.phone).replace(/\D/g, '') : '';
-  const start = formatFriendlyDate(member.startDate);
-  const end = formatFriendlyDate(member.endDate);
-
-  const message = `¡Hola *${member.firstName || ''} ${member.lastName || ''}*! 🏋️‍♂️\n\nQueremos agradecerte por ser parte de *Forza Club*.\n\nTe recordamos los detalles de tu membresía:\n📅 *Fecha de inicio:* ${start}\n⏳ *Fecha de vencimiento:* ${end}\n\n¡Sigue dando lo mejor en tus entrenamientos! 💪`;
-
-  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    if (!member) return "";
+    const phone = member.phone ? String(member.phone).replace(/\D/g, '') : '';
+    const start = formatFriendlyDate(member.startDate);
+    const end = formatFriendlyDate(member.endDate);
+    const message = `¡Hola *${member.firstName || ''} ${member.lastName || ''}*! 🏋️‍♂️\n\nQueremos agradecerte por ser parte de *Forza Club*.\n\nTe recordamos los detalles de tu membresía:\n📅 *Fecha de inicio:* ${start}\n⏳ *Fecha de vencimiento:* ${end}\n\n¡Sigue dando lo mejor en tus entrenamientos! 💪`;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
 export function getDaysRemaining(endDateStr: any): number {
-  const clean = normalizeDate(endDateStr);
-  if (!clean) return 0;
+    const clean = getSafeDateString(endDateStr);
+    if (!clean) return 0;
 
-  try {
-    const [year, month, day] = clean.split("-").map(Number);
-    const endDate = new Date(year, month - 1, day);
+    const [y, m, d] = clean.split("-").map(Number);
+    const endDate = new Date(y, m - 1, d);
     endDate.setHours(0, 0, 0, 0);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const diffTime = endDate.getTime() - today.getTime();
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  } catch(e) {
-    return 0;
-  }
+    const diff = endDate.getTime() - today.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }

@@ -14,6 +14,9 @@ const getTodayString = () => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
+// MAGIA AQUÍ: Agarramos el primer plan que exista en tu archivo types.ts
+const initialPlan = Object.keys(PLAN_DETAILS) as PlanType;
+
 interface MemberModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -27,8 +30,7 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
     lastName: '',
     dni: '',
     phone: '',
-    plan: '1_month' as PlanType,
-    // INYECCIÓN SEGURA DE FECHA ACTUAL
+    plan: initialPlan, // <--- AHORA NUNCA ESTARÁ VACÍO O INCORRECTO
     startDate: getTodayString(),
   });
 
@@ -46,7 +48,7 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
         lastName: initialData.lastName,
         dni: initialData.dni,
         phone: initialData.phone,
-        plan: initialData.plan,
+        plan: initialData.plan || initialPlan,
         startDate: safeStartDate || getTodayString(),
       });
     } else {
@@ -55,7 +57,7 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
         lastName: '',
         dni: '',
         phone: '',
-        plan: '1_month',
+        plan: initialPlan, // <--- AQUÍ TAMBIÉN
         startDate: getTodayString(),
       });
     }
