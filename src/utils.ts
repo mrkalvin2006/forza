@@ -1,31 +1,45 @@
 // src/utils.ts
 import { PlanType, PLAN_DETAILS } from './types';
 
-// LIMPIEZA SEGURA: Maneja arrays, strings o nulos sin romperse
+// LIMPIEZA SEGURA PASO A PASO
 export function cleanDate(val: any): string {
   if (!val) return "";
-  // Convertimos a string y tomamos solo la parte de la fecha antes de cualquier "T" o espacio
-  const str = Array.isArray(val) ? String(val) : String(val);
-  return str.split('T').split(' ').trim();
+  
+  // Paso 1: Convertir a String (maneja arrays o nulos)
+  let str = Array.isArray(val) ? String(val) : String(val);
+  
+  // Paso 2: Quitar la parte de la hora (T)
+  const part1 = str.split('T');
+  
+  // Paso 3: Quitar espacios y tomar la primera parte
+  const part2 = part1.split(' ');
+  
+  return part2.trim();
 }
 
 export function formatDate(dateString: any): string {
   const clean = cleanDate(dateString);
   if (!clean || !clean.includes('-')) return "---";
+  
   const parts = clean.split("-");
   if (parts.length !== 3) return "---";
+  
   return `${parts}-${parts}-${parts}`;
 }
 
 export function formatFriendlyDate(dateString: any): string {
   const clean = cleanDate(dateString);
   if (!clean || !clean.includes('-')) return "---";
+  
   const parts = clean.split("-");
   if (parts.length !== 3) return "---";
   
   const [year, month, day] = parts;
   const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-  const monthName = months[parseInt(month, 10) - 1] || month;
+  
+  const monthIndex = parseInt(month, 10) - 1;
+  const monthName = months[monthIndex] || month;
+  
   return `${day} ${monthName}-${year}`;
 }
 
@@ -63,6 +77,7 @@ export function generateWhatsAppLink(member: any) {
   const end = formatFriendlyDate(member.endDate);
 
   const message = `¡Hola *${member.firstName || ''} ${member.lastName || ''}*! 🏋️‍♂️\n\nQueremos agradecerte por ser parte de *Forza Club*.\n\nTe recordamos los detalles de tu membresía:\n📅 *Fecha de inicio:* ${start}\n⏳ *Fecha de vencimiento:* ${end}\n\n¡Sigue dando lo mejor en tus entrenamientos! 💪`;
+  
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
