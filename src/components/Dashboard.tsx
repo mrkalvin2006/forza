@@ -3,8 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, Plus, Edit2, Trash2, MessageCircle, LogOut, Users, CalendarClock, Loader2, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Member, PLAN_DETAILS } from '../types';
-// ACTUALIZADO: Importamos formatFriendlyDate en lugar de formatDate
-import { generateWhatsAppLink, getDaysRemaining, formatFriendlyDate } from '../utils'; 
+import { generateWhatsAppLink, getDaysRemaining } from '../utils';
 import MemberModal from './MemberModal';
 import { supabase } from '../supabase';
 
@@ -68,12 +67,14 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     setDeleteConfirmation({ isOpen: false, member: null });
   };
 
+  // --- STATS ---
   const stats = {
     total: members.length,
     active: members.filter(m => getDaysRemaining(m.endDate) >= 0).length,
     expiringSoon: members.filter(m => { const days = getDaysRemaining(m.endDate); return days >= 0 && days <= 30; }).length
   };
 
+  // --- FILTROS ---
   const filteredMembers = members.filter(member => {
     const fullName = `${member.firstName} ${member.lastName} ${member.dni}`.toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase());
@@ -89,9 +90,12 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       className="min-h-screen bg-black text-zinc-100 font-sans pb-10 relative overflow-hidden bg-cover bg-center"
       style={{ backgroundImage: `url(${GymBackground})` }}
     >
+      {/* VIP Glass Overlay */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] z-0" />
 
+      {/* CABECERA VIP */}
       <header className="border-b border-zinc-800/60 bg-black/70 backdrop-blur-2xl sticky top-0 z-40 relative shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
+        {/* Destello dorado sutil */}
         <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-[linear-gradient(90deg,transparent_0%,#EAB308_50%,transparent_100%)] opacity-30" />
         
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between relative z-10">
@@ -129,6 +133,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             <div className="flex items-center gap-4 relative z-10">
               <div className="p-3 bg-zinc-800 rounded-2xl text-zinc-400"><Users size={24}/></div>
               <div>
+                {/* TÍTULO AMARILLO */}
                 <p className="text-xs font-black text-yellow-500 uppercase tracking-widest">Total VIPs</p>
                 <p className="text-2xl font-bold">{isLoading ? '...' : stats.total}</p>
               </div>
@@ -138,6 +143,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             <div className="flex items-center gap-4 relative z-10">
               <div className="p-3 bg-emerald-500/10 rounded-2xl text-emerald-500">< ShieldCheck size={24}/></div>
               <div>
+                {/* TÍTULO AMARILLO */}
                 <p className="text-xs font-black text-yellow-500 uppercase tracking-widest">Suscripciones Activas</p>
                 <p className="text-2xl font-bold text-emerald-400">{isLoading ? '...' : stats.active}</p>
               </div>
@@ -147,6 +153,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             <div className="flex items-center gap-4 relative z-10">
               <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-500"><AlertTriangle size={24}/></div>
               <div>
+                {/* TÍTULO AMARILLO */}
                 <p className="text-xs font-black text-yellow-500 uppercase tracking-widest">Renovación Pendiente</p>
                 <p className="text-2xl font-bold text-blue-400">{isLoading ? '...' : stats.expiringSoon}</p>
               </div>
@@ -170,12 +177,14 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         </div>
 
-        {/* TABLA - CLEAN UI */}
+        {/* TABLA - EFECTO ELIMINADO */}
         <div className="bg-zinc-900/20 border border-zinc-800 rounded-[2rem] overflow-hidden backdrop-blur-md shadow-[0_10px_40px_rgba(0,0,0,0.2)] relative">
           
+          {/* ELIMINACIÓN DE BARRAS DE NAVEGACIÓN (Tailwind utility) */}
           <div className="overflow-x-auto scrollbar-hide">
             <table className="w-full text-left border-collapse relative z-10">
               <thead>
+                {/* TÍTULOS AMARILLOS */}
                 <tr className="text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] border-b border-zinc-800/50">
                   <th className="px-8 py-6">Alumno / DNI</th>
                   <th className="px-8 py-6">Plan / Inversión</th>
@@ -193,13 +202,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                     <tr key={member.id} className="hover:bg-white/[0.02] transition-colors group">
                       <td className="px-8 py-6 font-bold text-white">{member.firstName} {member.lastName} <p className="text-[10px] text-zinc-600 font-mono mt-1">{member.dni}</p></td>
                       <td className="px-8 py-6"><span className="bg-zinc-800 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border border-zinc-700">{PLAN_DETAILS[member.plan]?.label}</span></td>
-                      
-                      {/* COLUMNA ACTUALIZADA: Usando formatFriendlyDate */}
-                      <td className="px-8 py-6 text-sm">
-                        <span className="text-zinc-500">{formatFriendlyDate(member.startDate)}</span> 
-                        <span className="text-white font-bold ml-2">→ {formatFriendlyDate(member.endDate)}</span>
-                      </td>
-
+                      <td className="px-8 py-6 text-sm"><span className="text-zinc-500">{member.startDate}</span> <span className="text-white font-bold ml-2">→ {member.endDate}</span></td>
                       <td className="px-8 py-6">
                         <div className="flex justify-center">
                           {days < 0 ? (
@@ -230,6 +233,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
 
       <MemberModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveMember} initialData={editingMember} />
 
+      {/* CONFIRMACIÓN DE ELIMINACIÓN */}
       <AnimatePresence>
         {deleteConfirmation.isOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
