@@ -1,16 +1,28 @@
 // src/utils.ts
 import { PlanType, PLAN_DETAILS } from './types';
 
-// EXTRAE LA FECHA DE FORMA DIRECTA Y SEGURA
+// EXTRAE LA FECHA DE FORMA DIRECTA Y ULTRA SEGURA
 export function getSafeDateString(val: any): string {
     if (!val) return "";
     const str = String(val);
     
+    // CASO 1: YYYY-MM-DD
     const matchYMD = str.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
-    if (matchYMD) return `${matchYMD}-${matchYMD.padStart(2, '0')}-${matchYMD.padStart(2, '0')}`;
+    if (matchYMD) {
+        const y = String(matchYMD);
+        const m = String(matchYMD).padStart(2, '0');
+        const d = String(matchYMD).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
     
+    // CASO 2: DD/MM/YYYY
     const matchDMY = str.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
-    if (matchDMY) return `${matchDMY}-${matchDMY.padStart(2, '0')}-${matchDMY.padStart(2, '0')}`;
+    if (matchDMY) {
+        const d = String(matchDMY).padStart(2, '0');
+        const m = String(matchDMY).padStart(2, '0');
+        const y = String(matchDMY);
+        return `${y}-${m}-${d}`;
+    }
     
     return "";
 }
@@ -33,27 +45,26 @@ export function formatFriendlyDate(dateString: any): string {
 export function calculateEndDate(startDateStr: any, planStr: any): string {
     let clean = getSafeDateString(startDateStr);
     
-    // Si no hay fecha de inicio, forzamos la de hoy
     if (!clean) {
         const now = new Date();
-        clean = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        clean = `${now.getFullYear()}-${m}-${d}`;
     }
 
     try {
         const [y, m, d] = clean.split("-").map(Number);
         const date = new Date(y, m - 1, d);
 
-        // Buscamos el plan.
         const details = PLAN_DETAILS[planStr as PlanType];
         
-        // EL SEGURO DEFINITIVO: Si el plan no existe o está mal escrito, suma 1 mes por defecto.
         const addDays = details?.durationDays ? Number(details.durationDays) : 0;
         const addMonths = details?.durationMonths ? Number(details.durationMonths) : (!details && !addDays ? 1 : 0);
 
         if (addDays) date.setDate(date.getDate() + addDays);
         if (addMonths) date.setMonth(date.getMonth() + addMonths);
 
-        const outY = date.getFullYear();
+        const outY = String(date.getFullYear());
         const outM = String(date.getMonth() + 1).padStart(2, '0');
         const outD = String(date.getDate()).padStart(2, '0');
 
