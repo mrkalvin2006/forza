@@ -5,7 +5,6 @@ import { X, CalendarDays, UserSquare2, ChevronsUpDown, PhoneForwarded } from 'lu
 import { Member, PlanType, PLAN_DETAILS } from '../types';
 import { calculateEndDate, formatFriendlyDate } from '../utils';
 
-// Función segura para inyectar la fecha de hoy correctamente
 const getTodayString = () => {
   const date = new Date();
   const yyyy = date.getFullYear();
@@ -14,7 +13,7 @@ const getTodayString = () => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-// MAGIA AQUÍ: Agarramos el primer plan que exista en tu archivo types.ts
+// Auto-selección del primer plan de tu archivo types.ts
 const initialPlan = Object.keys(PLAN_DETAILS) as PlanType;
 
 interface MemberModalProps {
@@ -30,7 +29,7 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
     lastName: '',
     dni: '',
     phone: '',
-    plan: initialPlan, // <--- AHORA NUNCA ESTARÁ VACÍO O INCORRECTO
+    plan: initialPlan,
     startDate: getTodayString(),
   });
 
@@ -38,7 +37,6 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
 
   useEffect(() => {
     if (initialData) {
-      // Nos aseguramos de limpiar la fecha si viene corrupta de la BD al editar
       const safeStartDate = Array.isArray(initialData.startDate) 
         ? initialData.startDate 
         : initialData.startDate?.split('T');
@@ -57,7 +55,7 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
         lastName: '',
         dni: '',
         phone: '',
-        plan: initialPlan, // <--- AQUÍ TAMBIÉN
+        plan: initialPlan,
         startDate: getTodayString(),
       });
     }

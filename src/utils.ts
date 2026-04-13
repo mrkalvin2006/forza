@@ -1,99 +1,88 @@
 // src/utils.ts
 import { PlanType, PLAN_DETAILS } from './types';
 
-// EXTRAE LA FECHA DE FORMA DIRECTA Y ULTRA SEGURA
-export function getSafeDateString(val: any): string {
-    if (!val) return "";
-    const str = String(val);
-    
-    // CASO 1: YYYY-MM-DD
-    const matchYMD = str.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
-    if (matchYMD) {
-        const y = String(matchYMD);
-        const m = String(matchYMD).padStart(2, '0');
-        const d = String(matchYMD).padStart(2, '0');
-        return `${y}-${m}-${d}`;
-    }
-    
-    // CASO 2: DD/MM/YYYY
-    const matchDMY = str.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
-    if (matchDMY) {
-        const d = String(matchDMY).padStart(2, '0');
-        const m = String(matchDMY).padStart(2, '0');
-        const y = String(matchDMY);
-        return `${y}-${m}-${d}`;
-    }
-    
-    return "";
+// LIMPIEZA BÁSICA (Solo quita la "T" y los arrays, sin inventar nada más)
+export function cleanDate(val: any): string {
+  if (!val) return "";
+  let str = Array.isArray(val) ? String(val) : String(val);
+  return str.split('T').trim();
 }
 
 export function formatDate(dateString: any): string {
-    const clean = getSafeDateString(dateString);
-    if (!clean) return "---";
-    const [y, m, d] = clean.split("-");
-    return `${d}-${m}-${y}`;
+  const clean = cleanDate(dateString);
+  if (!clean) return "---";
+  const parts = clean.split("-");
+  if (parts.length !== 3) return "---";
+  return `${parts}-${parts}-${parts}`;
 }
 
 export function formatFriendlyDate(dateString: any): string {
-    const clean = getSafeDateString(dateString);
-    if (!clean) return "---";
-    const [y, m, d] = clean.split("-");
-    const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-    return `${d} ${months[parseInt(m, 10) - 1] || m}-${y}`;
+  const clean = cleanDate(dateString);
+  if (!clean) return "---";
+  const parts = clean.split("-");
+  if (parts.length !== 3) return "---";
+  
+  const [year, month, day] = parts;
+  const months = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+  const monthName = months[parseInt(month, 10) - 1] || month;
+  return `${day} ${monthName}-${year}`;
 }
 
-export function calculateEndDate(startDateStr: any, planStr: any): string {
-    let clean = getSafeDateString(startDateStr);
+export function calculateEndDate(startDateStr: any, plan: PlanType): string {
+  const clean = cleanDate(startDateStr);
+  if (!clean) return "";
+
+  try {
+    const parts = clean.split("-");
+    if (parts.length !== 3) return clean;
+
+    const [year, month, day] = parts.map(Number);
+    const date = new Date(year, month - 1, day);
     
-    if (!clean) {
-        const now = new Date();
-        const m = String(now.getMonth() + 1).padStart(2, '0');
-        const d = String(now.getDate()).padStart(2, '0');
-        clean = `${now.getFullYear()}-${m}-${d}`;
+    const details = PLAN_DETAILS[plan];
+    if (details) {
+      if (details.durationDays) date.setDate(date.getDate() + Number(details.durationDays));
+      if (details.durationMonths) date.setMonth(date.getMonth() + Number(details.durationMonths));
     }
 
-    try {
-        const [y, m, d] = clean.split("-").map(Number);
-        const date = new Date(y, m - 1, d);
+    const outYear = date.getFullYear();
+    const outMonth = String(date.getMonth() + 1).padStart(2, '0');
+    const outDay = String(date.getDate()).padStart(2, '0');
 
-        const details = PLAN_DETAILS[planStr as PlanType];
-        
-        const addDays = details?.durationDays ? Number(details.durationDays) : 0;
-        const addMonths = details?.durationMonths ? Number(details.durationMonths) : (!details && !addDays ? 1 : 0);
-
-        if (addDays) date.setDate(date.getDate() + addDays);
-        if (addMonths) date.setMonth(date.getMonth() + addMonths);
-
-        const outY = String(date.getFullYear());
-        const outM = String(date.getMonth() + 1).padStart(2, '0');
-        const outD = String(date.getDate()).padStart(2, '0');
-
-        return `${outY}-${outM}-${outD}`;
-    } catch (e) {
-        return clean; 
-    }
+    return `${outYear}-${outMonth}-${outDay}`;
+  } catch (e) {
+    return clean;
+  }
 }
 
 export function generateWhatsAppLink(member: any) {
-    if (!member) return "";
-    const phone = member.phone ? String(member.phone).replace(/\D/g, '') : '';
-    const start = formatFriendlyDate(member.startDate);
-    const end = formatFriendlyDate(member.endDate);
-    const message = `¡Hola *${member.firstName || ''} ${member.lastName || ''}*! 🏋️‍♂️\n\nQueremos agradecerte por ser parte de *Forza Club*.\n\nTe recordamos los detalles de tu membresía:\n📅 *Fecha de inicio:* ${start}\n⏳ *Fecha de vencimiento:* ${end}\n\n¡Sigue dando lo mejor en tus entrenamientos! 💪`;
-    return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  if (!member) return "";
+  const phone = member.phone ? String(member.phone).replace(/\D/g, '') : '';
+  const start = formatFriendlyDate(member.startDate);
+  const end = formatFriendlyDate(member.endDate);
+
+  const message = `¡Hola *${member.firstName || ''} ${member.lastName || ''}*! 🏋️‍♂️\n\nQueremos agradecerte por ser parte de *Forza Club*.\n\nTe recordamos los detalles de tu membresía:\n📅 *Fecha de inicio:* ${start}\n⏳ *Fecha de vencimiento:* ${end}\n\n¡Sigue dando lo mejor en tus entrenamientos! 💪`;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
 export function getDaysRemaining(endDateStr: any): number {
-    const clean = getSafeDateString(endDateStr);
-    if (!clean) return 0;
+  const clean = cleanDate(endDateStr);
+  if (!clean) return 0;
 
-    const [y, m, d] = clean.split("-").map(Number);
-    const endDate = new Date(y, m - 1, d);
+  try {
+    const parts = clean.split("-");
+    if (parts.length !== 3) return 0;
+
+    const [year, month, day] = parts.map(Number);
+    const endDate = new Date(year, month - 1, day);
     endDate.setHours(0, 0, 0, 0);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const diff = endDate.getTime() - today.getTime();
-    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+    const diffTime = endDate.getTime() - today.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  } catch(e) {
+    return 0;
+  }
 }
