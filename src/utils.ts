@@ -1,20 +1,28 @@
 // src/utils.ts
 import { PlanType, PLAN_DETAILS } from './types';
 
-// LIMPIEZA SEGURA PASO A PASO
+// LIMPIEZA ABSOLUTA SIN ENCADENAMIENTOS
 export function cleanDate(val: any): string {
   if (!val) return "";
   
-  // Paso 1: Convertir a String (maneja arrays o nulos)
-  let str = Array.isArray(val) ? String(val) : String(val);
+  // 1. Convertir a texto de forma segura
+  let str = "";
+  if (Array.isArray(val)) {
+    str = String(val);
+  } else {
+    str = String(val);
+  }
   
-  // Paso 2: Quitar la parte de la hora (T)
-  const part1 = str.split('T');
+  // 2. Extraer solo la fecha sin encadenar métodos
+  let datePart = str;
+  if (datePart.includes('T')) {
+    datePart = datePart.split('T');
+  }
+  if (datePart.includes(' ')) {
+    datePart = datePart.split(' ');
+  }
   
-  // Paso 3: Quitar espacios y tomar la primera parte
-  const part2 = part1.split(' ');
-  
-  return part2.trim();
+  return datePart.trim();
 }
 
 export function formatDate(dateString: any): string {
