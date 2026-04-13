@@ -1,16 +1,17 @@
 // src/utils.ts
 import { PlanType, PLAN_DETAILS } from './types';
 
-// LIMPIEZA BÁSICA (Solo quita la "T" y los arrays, sin inventar nada más)
+// LIMPIEZA SEGURA: Maneja arrays, strings o nulos sin romperse
 export function cleanDate(val: any): string {
   if (!val) return "";
-  let str = Array.isArray(val) ? String(val) : String(val);
-  return str.split('T').trim();
+  // Convertimos a string y tomamos solo la parte de la fecha antes de cualquier "T" o espacio
+  const str = Array.isArray(val) ? String(val) : String(val);
+  return str.split('T').split(' ').trim();
 }
 
 export function formatDate(dateString: any): string {
   const clean = cleanDate(dateString);
-  if (!clean) return "---";
+  if (!clean || !clean.includes('-')) return "---";
   const parts = clean.split("-");
   if (parts.length !== 3) return "---";
   return `${parts}-${parts}-${parts}`;
@@ -18,7 +19,7 @@ export function formatDate(dateString: any): string {
 
 export function formatFriendlyDate(dateString: any): string {
   const clean = cleanDate(dateString);
-  if (!clean) return "---";
+  if (!clean || !clean.includes('-')) return "---";
   const parts = clean.split("-");
   if (parts.length !== 3) return "---";
   
@@ -67,7 +68,7 @@ export function generateWhatsAppLink(member: any) {
 
 export function getDaysRemaining(endDateStr: any): number {
   const clean = cleanDate(endDateStr);
-  if (!clean) return 0;
+  if (!clean || !clean.includes('-')) return 0;
 
   try {
     const parts = clean.split("-");
