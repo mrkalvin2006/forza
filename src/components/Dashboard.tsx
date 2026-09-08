@@ -127,7 +127,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const cajaLabel = (key: string) => (cajaPeriod === 'daily' ? formatFriendlyDate(key) : cajaPeriod === 'weekly' ? getWeekLabel(key) : getMonthLabel(key));
 
   const filteredAlumnos = alumnos.filter((a) => {
-    const fullName = `${a.firstName} ${a.lastName} ${a.dni}`.toLowerCase();
+    const fullName = `${a.firstName} ${a.lastName || ''} ${a.phone || ''}`.toLowerCase();
     const matchesSearch = fullName.includes(searchTerm.toLowerCase());
     if (!matchesSearch) return false;
     const days = a.lastEndDate ? getDaysRemaining(a.lastEndDate) : -Infinity;
@@ -137,7 +137,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   });
 
   const filteredMatriculas = matriculas.filter((m) => {
-    const fullName = `${m.firstName} ${m.lastName} ${m.dni}`.toLowerCase();
+    const fullName = `${m.firstName} ${m.lastName || ''} ${m.dni || ''}`.toLowerCase();
     return fullName.includes(searchTerm.toLowerCase());
   });
 
@@ -243,7 +243,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           <div className="relative w-full md:w-96 group ml-auto">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-white transition-colors" size={18} />
             <input
-              type="text" placeholder="Buscar por nombre o DNI..."
+              type="text" placeholder="Buscar por nombre o celular..."
               className="w-full bg-zinc-900/50 border border-zinc-800 rounded-2xl pl-12 pr-4 py-3.5 focus:border-zinc-500 transition-all outline-none font-medium placeholder:text-zinc-700"
               value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -314,7 +314,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
               <table className="w-full text-left border-collapse relative z-10">
                 <thead>
                   <tr className="text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] border-b border-zinc-800/50">
-                    <th className="px-8 py-6">Alumno / DNI</th>
+                    <th className="px-8 py-6">Alumno</th>
                     <th className="px-8 py-6">Último Plan</th>
                     <th className="px-8 py-6">Matrícula y Fin</th>
                     <th className="px-8 py-6 text-center">Estado</th>
@@ -330,7 +330,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                     const days = a.lastEndDate ? getDaysRemaining(a.lastEndDate) : null;
                     return (
                       <tr key={a.id} className="hover:bg-white/[0.02] transition-colors group">
-                        <td className="px-8 py-6 font-bold text-white">{a.firstName} {a.lastName} <p className="text-[10px] text-zinc-600 font-mono mt-1">{a.dni}</p></td>
+                        <td className="px-8 py-6 font-bold text-white">{a.firstName} {a.lastName} {a.phone && <p className="text-[10px] text-zinc-600 font-mono mt-1">{a.phone}</p>}</td>
                         <td className="px-8 py-6">{a.lastPlan ? <span className="bg-zinc-800 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border border-zinc-700">{PLAN_DETAILS[a.lastPlan]?.label}</span> : <span className="text-zinc-600 text-xs">Sin matrícula</span>}</td>
                         <td className="px-8 py-6 text-sm">
                           {a.lastStartDate ? <><span className="text-zinc-500">{a.lastStartDate}</span> <span className="text-white font-bold ml-2">→ {a.lastEndDate}</span></> : <span className="text-zinc-600">—</span>}
@@ -365,7 +365,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
               <table className="w-full text-left border-collapse relative z-10">
                 <thead>
                   <tr className="text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] border-b border-zinc-800/50">
-                    <th className="px-8 py-6">Alumno / DNI</th>
+                    <th className="px-8 py-6">Alumno</th>
                     <th className="px-8 py-6">Plan</th>
                     <th className="px-8 py-6">Inicio</th>
                     <th className="px-8 py-6">Fin</th>
@@ -380,7 +380,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                     <tr><td colSpan={6} className="py-20 text-center text-zinc-600 font-bold uppercase">Sin resultados</td></tr>
                   ) : filteredMatriculas.map((m) => (
                     <tr key={m.id} className="hover:bg-white/[0.02] transition-colors group">
-                      <td className="px-8 py-6 font-bold text-white">{m.firstName} {m.lastName} <p className="text-[10px] text-zinc-600 font-mono mt-1">{m.dni}</p></td>
+                      <td className="px-8 py-6 font-bold text-white">{m.firstName} {m.lastName}</td>
                       <td className="px-8 py-6"><span className="bg-zinc-800 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border border-zinc-700">{PLAN_DETAILS[m.plan]?.label}</span></td>
                       <td className="px-8 py-6 text-sm text-zinc-400">{formatFriendlyDate(m.startDate)}</td>
                       <td className="px-8 py-6 text-sm text-white font-bold">{formatFriendlyDate(m.endDate)}</td>
