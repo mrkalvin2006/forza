@@ -1,14 +1,36 @@
 export type PlanType = '1_week' | '2_weeks' | '1_month' | '2_months' | '3_months' | '5_months';
 
-export interface Member {
+// Un alumno: una fila por persona, sin importar cuántas veces se matricule.
+export interface Alumno {
   id: string;
   firstName: string;
   lastName: string;
   dni: string;
   phone: string;
+}
+
+// Una matrícula: cada inscripción/pago que hace un alumno.
+export interface Matricula {
+  id: string;
+  alumnoId: string;
   plan: PlanType;
   startDate: string;
   endDate: string;
+}
+
+// Un alumno junto con los datos de su matrícula más reciente (para la vista de Alumnos).
+export interface AlumnoConEstado extends Alumno {
+  lastMatriculaId: string | null;
+  lastPlan: PlanType | null;
+  lastStartDate: string | null;
+  lastEndDate: string | null;
+}
+
+// Una matrícula junto con los datos del alumno al que pertenece (para la vista de Matrículas).
+export interface MatriculaConAlumno extends Matricula {
+  firstName: string;
+  lastName: string;
+  dni: string;
 }
 
 export const PLAN_DETAILS: Record<PlanType, { label: string; price: number; durationDays?: number; durationMonths?: number }> = {

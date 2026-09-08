@@ -1,9 +1,12 @@
 // src/components/MemberModal.tsx
+// Modal para crear una Nueva Matrícula: busca al alumno por DNI (o lo crea si no existe)
+// y luego registra la matrícula (plan + fechas) asociada a ese alumno.
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, CalendarDays, UserSquare2, ChevronsUpDown, PhoneForwarded } from 'lucide-react';
-import { Member, PlanType, PLAN_DETAILS } from '../types';
+import { X, CalendarDays, UserSquare2, ChevronsUpDown, PhoneForwarded, CheckCircle2 } from 'lucide-react';
+import { PlanType, PLAN_DETAILS } from '../types';
 import { calculateEndDate, formatFriendlyDate } from '../utils';
+import { supabase } from '../supabase';
 
 const getTodayString = () => {
   const date = new Date();
@@ -13,17 +16,18 @@ const getTodayString = () => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-// Auto-selección del primer plan de tu archivo types.ts
-const initialPlan = Object.keys(PLAN_DETAILS) as PlanType;
+const initialPlan = Object.keys(PLAN_DETAILS)[0] as PlanType;
 
 interface MemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (member: Omit<Member, 'id'>) => void;
-  initialData?: Member | null;
+  onSaved: () => void;
+  // Si se abre desde la fila de un alumno existente ("Nueva matrícula para este alumno"),
+  // se pasa su id y datos para precargar el formulario y saltar la búsqueda por DNI.
+  preselectedAlumno?: { id: string; firstName: string; lastName: string; dni: string; phone: string } | null;
 }
 
-export default function MemberModal({ isOpen, onClose, onSave, initialData }: MemberModalProps) {
+export default function MemberModal({ isOpen, onClose, onSaved, preselectedAlumno }: MemberModalProps) {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -32,44 +36,86 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
     plan: initialPlan,
     startDate: getTodayString(),
   });
-
   const [computedEndDate, setComputedEndDate] = useState('');
+  const [foundAlumnoId, setFoundAlumnoId] = useState<string | null>(null);
+  const [checkingDni, setCheckingDni] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (initialData) {
-      const safeStartDate = Array.isArray(initialData.startDate) 
-        ? initialData.startDate 
-        : initialData.startDate?.split('T');
-
+    if (!isOpen) return;
+    if (preselectedAlumno) {
       setFormData({
-        firstName: initialData.firstName,
-        lastName: initialData.lastName,
-        dni: initialData.dni,
-        phone: initialData.phone,
-        plan: initialData.plan || initialPlan,
-        startDate: safeStartDate || getTodayString(),
-      });
-    } else {
-      setFormData({
-        firstName: '',
-        lastName: '',
-        dni: '',
-        phone: '',
+        firstName: preselectedAlumno.firstName,
+        lastName: preselectedAlumno.lastName,
+        dni: preselectedAlumno.dni,
+        phone: preselectedAlumno.phone,
         plan: initialPlan,
         startDate: getTodayString(),
       });
+      setFoundAlumnoId(preselectedAlumno.id);
+    } else {
+      setFormData({ firstName: '', lastName: '', dni: '', phone: '', plan: initialPlan, startDate: getTodayString() });
+      setFoundAlumnoId(null);
     }
-  }, [initialData, isOpen]);
+  }, [isOpen, preselectedAlumno]);
 
   useEffect(() => {
     const end = calculateEndDate(formData.startDate, formData.plan);
     setComputedEndDate(end);
   }, [formData.startDate, formData.plan]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Al salir del campo DNI (y si no venimos de un alumno preseleccionado), buscamos si ya existe.
+  const handleDniBlur = async () => {
+    if (preselectedAlumno) return;
+    const dni = formData.dni.trim();
+    if (!dni) {
+      setFoundAlumnoId(null);
+      return;
+    }
+    setCheckingDni(true);
+    const { data } = await supabase.from('alumnos').select('*').eq('dni', dni).maybeSingle();
+    setCheckingDni(false);
+    if (data) {
+      setFoundAlumnoId(data.id);
+      setFormData((prev) => ({ ...prev, firstName: data.first_name, lastName: data.last_name, phone: data.phone || '' }));
+    } else {
+      setFoundAlumnoId(null);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ ...formData, endDate: computedEndDate });
-    onClose();
+    setSaving(true);
+    try {
+      let alumnoId = foundAlumnoId;
+
+      if (!alumnoId) {
+        // Crear alumno nuevo
+        const { data: newAlumno, error: alumnoError } = await supabase
+          .from('alumnos')
+          .insert([{ first_name: formData.firstName, last_name: formData.lastName, dni: formData.dni.trim(), phone: formData.phone }])
+          .select()
+          .single();
+        if (alumnoError) throw alumnoError;
+        alumnoId = newAlumno.id;
+      } else {
+        // Alumno existente: mantenemos su teléfono actualizado por si cambió
+        await supabase.from('alumnos').update({ phone: formData.phone }).eq('id', alumnoId);
+      }
+
+      const { error: matriculaError } = await supabase.from('matriculas').insert([
+        { alumno_id: alumnoId, plan: formData.plan, start_date: formData.startDate, end_date: computedEndDate },
+      ]);
+      if (matriculaError) throw matriculaError;
+
+      onSaved();
+      onClose();
+    } catch (err) {
+      console.error('Error guardando matrícula:', err);
+      alert('No se pudo guardar la matrícula. Revisa los datos e intenta de nuevo.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -86,7 +132,7 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
           <div className="flex justify-between items-center p-8 border-b border-zinc-800/50">
             <h2 className="text-xl font-black text-white uppercase tracking-tighter flex items-center gap-3">
               <UserSquare2 className="text-yellow-500" size={24} />
-              {initialData ? 'Actualizar Miembro VIP' : 'Nueva Matrícula VIP'}
+              Nueva Matrícula
             </h2>
             <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors p-2 rounded-full">
               <X className="w-6 h-6" />
@@ -96,18 +142,36 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
           <form onSubmit={handleSubmit} className="p-8 space-y-6">
             <div className="space-y-4">
               <div className="flex items-center gap-2 border-l-4 border-yellow-500 pl-3">
-                <h3 className="text-sm font-black text-yellow-500 uppercase tracking-widest">Datos Personales</h3>
+                <h3 className="text-sm font-black text-yellow-500 uppercase tracking-widest">Datos del Alumno</h3>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <input required type="text" value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="w-full px-4 py-3.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none" placeholder="Nombres" />
-                <input required type="text" value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="w-full px-4 py-3.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none" placeholder="Apellidos" />
+
+              <div>
+                <input
+                  required
+                  type="text"
+                  maxLength={8}
+                  value={formData.dni}
+                  onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
+                  onBlur={handleDniBlur}
+                  disabled={!!preselectedAlumno}
+                  className="w-full px-4 py-3.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none disabled:opacity-60"
+                  placeholder="DNI"
+                />
+                {checkingDni && <p className="text-xs text-zinc-500 mt-1 ml-1">Buscando...</p>}
+                {foundAlumnoId && (
+                  <p className="text-xs text-emerald-400 mt-1 ml-1 flex items-center gap-1">
+                    <CheckCircle2 size={14} /> Alumno existente encontrado — se agregará una nueva matrícula
+                  </p>
+                )}
               </div>
+
               <div className="grid grid-cols-2 gap-4">
-                <input required type="text" maxLength={8} value={formData.dni} onChange={(e) => setFormData({ ...formData, dni: e.target.value })} className="w-full px-4 py-3.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none" placeholder="DNI" />
-                <div className="relative">
-                  <PhoneForwarded className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} />
-                  <input required type="tel" maxLength={9} value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full pl-11 pr-4 py-3.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none" placeholder="Celular" />
-                </div>
+                <input required type="text" value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} disabled={!!foundAlumnoId} className="w-full px-4 py-3.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none disabled:opacity-60" placeholder="Nombres" />
+                <input required type="text" value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} disabled={!!foundAlumnoId} className="w-full px-4 py-3.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none disabled:opacity-60" placeholder="Apellidos" />
+              </div>
+              <div className="relative">
+                <PhoneForwarded className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} />
+                <input required type="tel" maxLength={9} value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full pl-11 pr-4 py-3.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none" placeholder="Celular" />
               </div>
             </div>
 
@@ -142,9 +206,9 @@ export default function MemberModal({ isOpen, onClose, onSave, initialData }: Me
               </div>
             </div>
 
-            <button type="submit" className="w-full py-4.5 bg-white text-black font-black uppercase text-sm rounded-2xl hover:bg-yellow-500 hover:text-white transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)] active:scale-95 flex items-center justify-center gap-3">
+            <button type="submit" disabled={saving} className="w-full py-4.5 bg-white text-black font-black uppercase text-sm rounded-2xl hover:bg-yellow-500 hover:text-white transition-all shadow-[0_0_30px_rgba(255,255,255,0.1)] active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50">
               <UserSquare2 size={20} />
-              {initialData ? 'Guardar Cambios' : 'Confirmar Matrícula VIP'}
+              {saving ? 'Guardando...' : 'Confirmar Matrícula'}
             </button>
           </form>
         </motion.div>
