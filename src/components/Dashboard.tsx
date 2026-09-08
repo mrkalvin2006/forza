@@ -27,7 +27,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const fetchMembers = async () => {
     setIsLoading(true);
     const { data, error } = await supabase
-      .from('members')
+      .from('forza_members')
       .select('*')
       .order('created_at', { ascending: false });
 
@@ -49,9 +49,9 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const handleSaveMember = async (memberData: Omit<Member, 'id'>) => {
     const dbData = { first_name: memberData.firstName, last_name: memberData.lastName, dni: memberData.dni, phone: memberData.phone, plan: memberData.plan, start_date: memberData.startDate, end_date: memberData.endDate };
     if (editingMember) {
-      await supabase.from('members').update(dbData).eq('id', editingMember.id);
+      await supabase.from('forza_members').update(dbData).eq('id', editingMember.id);
     } else {
-      await supabase.from('members').insert([dbData]);
+      await supabase.from('forza_members').insert([dbData]);
     }
     fetchMembers();
     setIsModalOpen(false);
@@ -61,7 +61,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const cancelDelete = () => setDeleteConfirmation({ isOpen: false, member: null });
   const confirmDelete = async () => {
     if (deleteConfirmation.member) {
-      await supabase.from('members').delete().eq('id', deleteConfirmation.member.id);
+      await supabase.from('forza_members').delete().eq('id', deleteConfirmation.member.id);
       setMembers(members.filter(m => m.id !== deleteConfirmation.member!.id));
     }
     setDeleteConfirmation({ isOpen: false, member: null });
