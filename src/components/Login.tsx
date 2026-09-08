@@ -1,13 +1,15 @@
 // src/components/Login.tsx
 import React, { useState } from 'react';
-import { User, Lock, ArrowRight, Loader2 } from 'lucide-react';
+import { Lock, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
 import { motion } from 'motion/react';
 import { supabase } from '../supabase';
 import ForzaLogo from '../assets/logo-forza.png';
 import GymBackground from '../assets/gym-background.png';
 
+// Usuario fijo: la app siempre inicia sesión como este usuario administrativo.
+const FIXED_USERNAME = 'admin';
+
 export default function Login({ onLogin }: { onLogin: () => void }) {
-  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,9 +21,9 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
 
     try {
       const { data, error: dbError } = await supabase
-        .from('users')
+        .from('forza_users')
         .select('*')
-        .eq('username', username.trim())
+        .eq('username', FIXED_USERNAME)
         .eq('password', password.trim())
         .maybeSingle();
 
@@ -70,27 +72,24 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                 className="max-h-40 w-auto drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] relative z-10" 
               />
             </motion.div>
-            
-            <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-zinc-500 uppercase ml-1 tracking-[0.3em]">Gestión Administrativa</label>
-                <div className="relative group">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-yellow-500 transition-colors" size={20} />
-                  <input 
-                    type="text" 
-                    value={username} 
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl pl-12 py-4 text-white outline-none focus:border-yellow-500/50 transition-all font-medium"
-                    placeholder="Usuario" 
-                    required 
-                  />
-                </div>
-              </div>
 
+            {/* BOTÓN / TARJETA DE USUARIO FIJO (no editable) */}
+            <div className="w-full flex flex-col items-center gap-2">
+              <label className="text-[10px] font-black text-zinc-500 uppercase ml-1 tracking-[0.3em] self-start">Gestión Administrativa</label>
+              <div className="w-full flex items-center gap-3 bg-zinc-900/80 border border-yellow-500/30 rounded-2xl px-4 py-4">
+                <div className="w-9 h-9 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                  <ShieldCheck className="text-yellow-500" size={18} />
+                </div>
+                <span className="text-white font-bold tracking-wide">Administrador</span>
+              </div>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="w-full flex flex-col gap-6 -mt-4">
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-yellow-500 transition-colors" size={20} />
                 <input 
                   type="password" 
+                  autoFocus
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-zinc-900/80 border border-zinc-800 rounded-2xl pl-12 py-4 text-white outline-none focus:border-yellow-500/50 transition-all font-medium"
