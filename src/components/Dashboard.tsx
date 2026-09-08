@@ -1,9 +1,9 @@
 // src/components/Dashboard.tsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Plus, Trash2, MessageCircle, LogOut, Users, AlertTriangle, ShieldCheck, History } from 'lucide-react';
+import { Search, Plus, Trash2, MessageCircle, LogOut, Users, AlertTriangle, ShieldCheck, History, Wallet, CalendarRange } from 'lucide-react';
 import { AlumnoConEstado, MatriculaConAlumno, PLAN_DETAILS } from '../types';
-import { generateWhatsAppLink, getDaysRemaining, formatFriendlyDate } from '../utils';
+import { generateWhatsAppLink, getDaysRemaining, formatFriendlyDate, getTodayString, getWeekStart, getWeekLabel, getMonthLabel } from '../utils';
 import MemberModal from './MemberModal';
 import { supabase } from '../supabase';
 
@@ -13,7 +13,8 @@ import GymBackground from '../assets/gym-background.png';
 export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [alumnos, setAlumnos] = useState<AlumnoConEstado[]>([]);
   const [matriculas, setMatriculas] = useState<MatriculaConAlumno[]>([]);
-  const [view, setView] = useState<'alumnos' | 'matriculas'>('alumnos');
+  const [view, setView] = useState<'alumnos' | 'matriculas' | 'caja'>('alumnos');
+  const [cajaPeriod, setCajaPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'nextMonth' | 'expired'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -49,6 +50,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         lastPlan: ultima ? ultima.plan : null,
         lastStartDate: ultima ? ultima.start_date : null,
         lastEndDate: ultima ? ultima.end_date : null,
+        lastAmount: ultima ? ultima.amount : null,
       };
     });
 
@@ -61,6 +63,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         plan: m.plan,
         startDate: m.start_date,
         endDate: m.end_date,
+        amount: m.amount,
         firstName: a.first_name || '(eliminado)',
         lastName: a.last_name || '',
         dni: a.dni || '',
@@ -97,7 +100,31 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     total: alumnos.length,
     active: alumnos.filter((a) => a.lastEndDate && getDaysRemaining(a.lastEndDate) >= 0).length,
     expired: alumnos.filter((a) => !a.lastEndDate || getDaysRemaining(a.lastEndDate) < 0).length,
+    totalRecaudado: matriculas.reduce((sum, m) => sum + (m.amount || 0), 0),
   };
+
+  // --- Flujo de Caja ---
+  const todayStr = getTodayString();
+  const weekStartToday = getWeekStart(todayStr);
+  const monthKeyToday = todayStr.slice(0, 7);
+
+  const cajaHoy = matriculas.filter((m) => m.startDate === todayStr).reduce((s, m) => s + Number(m.amount || 0), 0);
+  const cajaSemana = matriculas.filter((m) => getWeekStart(m.startDate) === weekStartToday).reduce((s, m) => s + Number(m.amount || 0), 0);
+  const cajaMes = matriculas.filter((m) => m.startDate.slice(0, 7) === monthKeyToday).reduce((s, m) => s + Number(m.amount || 0), 0);
+
+  const cajaGroups = (() => {
+    const map = new Map<string, { total: number; count: number }>();
+    matriculas.forEach((m) => {
+      const key = cajaPeriod === 'daily' ? m.startDate : cajaPeriod === 'weekly' ? getWeekStart(m.startDate) : m.startDate.slice(0, 7);
+      const cur = map.get(key) || { total: 0, count: 0 };
+      cur.total += Number(m.amount || 0);
+      cur.count += 1;
+      map.set(key, cur);
+    });
+    return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  })();
+
+  const cajaLabel = (key: string) => (cajaPeriod === 'daily' ? formatFriendlyDate(key) : cajaPeriod === 'weekly' ? getWeekLabel(key) : getMonthLabel(key));
 
   const filteredAlumnos = alumnos.filter((a) => {
     const fullName = `${a.firstName} ${a.lastName} ${a.dni}`.toLowerCase();
@@ -131,7 +158,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
               <div className="absolute top-1/2 left-0 -translate-y-1/2 w-48 h-12 bg-yellow-500/5 rounded-full blur-xl scale-110" />
               <h1 className="text-xl font-black tracking-tighter uppercase relative z-10 text-white flex items-center gap-3">
                 <Users className="text-yellow-500" size={24} />
-                {view === 'alumnos' ? 'Registro de Alumnos' : 'Registro de Matrículas'}
+                {view === 'alumnos' ? 'Registro de Alumnos' : view === 'matriculas' ? 'Registro de Matrículas' : 'Flujo de Caja'}
               </h1>
             </div>
           </div>
@@ -160,9 +187,12 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           <button onClick={() => setView('matriculas')} className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-tighter transition-all flex items-center gap-2 ${view === 'matriculas' ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>
             <History size={14} /> Matrículas
           </button>
+          <button onClick={() => setView('caja')} className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-tighter transition-all flex items-center gap-2 ${view === 'caja' ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>
+            <Wallet size={14} /> Caja
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
           <div className="bg-zinc-900/40 border border-zinc-800/60 p-6 rounded-3xl backdrop-blur-sm shadow-inner relative overflow-hidden">
             <div className="flex items-center gap-4 relative z-10">
               <div className="p-3 bg-zinc-800 rounded-2xl text-zinc-400"><Users size={24} /></div>
@@ -190,8 +220,18 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
               </div>
             </div>
           </div>
+          <div className="bg-zinc-900/40 border border-zinc-800/60 p-6 rounded-3xl backdrop-blur-sm shadow-inner relative overflow-hidden">
+            <div className="flex items-center gap-4 relative z-10">
+              <div className="p-3 bg-yellow-500/10 rounded-2xl text-yellow-500"><Wallet size={24} /></div>
+              <div>
+                <p className="text-xs font-black text-yellow-500 uppercase tracking-widest">Total Recaudado</p>
+                <p className="text-2xl font-bold">{isLoading ? '...' : `S/ ${stats.totalRecaudado.toFixed(2)}`}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
+        {view !== 'caja' && (
         <div className="flex flex-col md:flex-row gap-4 mb-8 items-center justify-between">
           {view === 'alumnos' && (
             <div className="flex gap-2 bg-zinc-900/80 p-1.5 rounded-2xl border border-zinc-800 shadow-[inset_0_2px_10px_rgba(0,0,0,0.2)]">
@@ -209,6 +249,64 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             />
           </div>
         </div>
+        )}
+
+        {view === 'caja' && (
+          <div className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-zinc-900/40 border border-zinc-800/60 p-6 rounded-3xl backdrop-blur-sm">
+                <p className="text-xs font-black text-yellow-500 uppercase tracking-widest mb-2">Hoy</p>
+                <p className="text-3xl font-bold">S/ {cajaHoy.toFixed(2)}</p>
+              </div>
+              <div className="bg-zinc-900/40 border border-zinc-800/60 p-6 rounded-3xl backdrop-blur-sm">
+                <p className="text-xs font-black text-yellow-500 uppercase tracking-widest mb-2">Esta Semana</p>
+                <p className="text-3xl font-bold">S/ {cajaSemana.toFixed(2)}</p>
+              </div>
+              <div className="bg-zinc-900/40 border border-zinc-800/60 p-6 rounded-3xl backdrop-blur-sm">
+                <p className="text-xs font-black text-yellow-500 uppercase tracking-widest mb-2">Este Mes</p>
+                <p className="text-3xl font-bold">S/ {cajaMes.toFixed(2)}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-zinc-400 text-xs font-black uppercase tracking-widest">
+                <CalendarRange size={16} className="text-yellow-500" /> Historial por período
+              </div>
+              <div className="flex gap-2 bg-zinc-900/80 p-1.5 rounded-2xl border border-zinc-800">
+                <button onClick={() => setCajaPeriod('daily')} className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-tighter transition-all ${cajaPeriod === 'daily' ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>Diario</button>
+                <button onClick={() => setCajaPeriod('weekly')} className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-tighter transition-all ${cajaPeriod === 'weekly' ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>Semanal</button>
+                <button onClick={() => setCajaPeriod('monthly')} className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-tighter transition-all ${cajaPeriod === 'monthly' ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>Mensual</button>
+              </div>
+            </div>
+
+            <div className="bg-zinc-900/20 border border-zinc-800 rounded-[2rem] overflow-hidden backdrop-blur-md">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] border-b border-zinc-800/50">
+                    <th className="px-8 py-6">Período</th>
+                    <th className="px-8 py-6">Matrículas</th>
+                    <th className="px-8 py-6 text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/30">
+                  {isLoading ? (
+                    <tr><td colSpan={3} className="py-20 text-center text-zinc-600 font-bold uppercase animate-pulse">Sincronizando base de datos...</td></tr>
+                  ) : cajaGroups.length === 0 ? (
+                    <tr><td colSpan={3} className="py-20 text-center text-zinc-600 font-bold uppercase">Sin matrículas registradas</td></tr>
+                  ) : cajaGroups.map(([key, { total, count }]) => (
+                    <tr key={key} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="px-8 py-6 font-bold text-white capitalize">{cajaLabel(key)}</td>
+                      <td className="px-8 py-6 text-zinc-400">{count}</td>
+                      <td className="px-8 py-6 text-right text-yellow-500 font-black">S/ {total.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {view !== 'caja' && (
 
         <div className="bg-zinc-900/20 border border-zinc-800 rounded-[2rem] overflow-hidden backdrop-blur-md shadow-[0_10px_40px_rgba(0,0,0,0.2)] relative">
           <div className="overflow-x-auto scrollbar-hide">
@@ -271,20 +369,22 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                     <th className="px-8 py-6">Plan</th>
                     <th className="px-8 py-6">Inicio</th>
                     <th className="px-8 py-6">Fin</th>
+                    <th className="px-8 py-6">Monto</th>
                     <th className="px-8 py-6 text-right">Gestión</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/30">
                   {isLoading ? (
-                    <tr><td colSpan={5} className="py-20 text-center text-zinc-600 font-bold uppercase animate-pulse">Sincronizando base de datos...</td></tr>
+                    <tr><td colSpan={6} className="py-20 text-center text-zinc-600 font-bold uppercase animate-pulse">Sincronizando base de datos...</td></tr>
                   ) : filteredMatriculas.length === 0 ? (
-                    <tr><td colSpan={5} className="py-20 text-center text-zinc-600 font-bold uppercase">Sin resultados</td></tr>
+                    <tr><td colSpan={6} className="py-20 text-center text-zinc-600 font-bold uppercase">Sin resultados</td></tr>
                   ) : filteredMatriculas.map((m) => (
                     <tr key={m.id} className="hover:bg-white/[0.02] transition-colors group">
                       <td className="px-8 py-6 font-bold text-white">{m.firstName} {m.lastName} <p className="text-[10px] text-zinc-600 font-mono mt-1">{m.dni}</p></td>
                       <td className="px-8 py-6"><span className="bg-zinc-800 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase border border-zinc-700">{PLAN_DETAILS[m.plan]?.label}</span></td>
                       <td className="px-8 py-6 text-sm text-zinc-400">{formatFriendlyDate(m.startDate)}</td>
                       <td className="px-8 py-6 text-sm text-white font-bold">{formatFriendlyDate(m.endDate)}</td>
+                      <td className="px-8 py-6 text-sm text-yellow-500 font-black">S/ {Number(m.amount || 0).toFixed(2)}</td>
                       <td className="px-8 py-6 text-right relative">
                         <div className="flex justify-end gap-3 opacity-40 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => setDeleteMatricula(m)} title="Eliminar matrícula" className="p-2.5 text-red-400 hover:bg-red-500/10 rounded-xl transition-all"><Trash2 size={18} /></button>
@@ -297,6 +397,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             )}
           </div>
         </div>
+        )}
       </main>
 
       <MemberModal

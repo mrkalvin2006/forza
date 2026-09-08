@@ -110,3 +110,51 @@ export function getDaysRemaining(endDateStr: any): number {
     return 0;
   }
 }
+// --- Utilidades de Flujo de Caja (agrupar montos por día / semana / mes) ---
+
+const MONTHS_ES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+
+export function getTodayString(): string {
+  const date = new Date();
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+// Devuelve la fecha (YYYY-MM-DD) del lunes de la semana a la que pertenece dateStr.
+export function getWeekStart(dateStr: string): string {
+  const clean = cleanDate(dateStr);
+  const parts = clean.split('-');
+  if (parts.length !== 3) return clean;
+  const [y, m, d] = parts.map(Number);
+  const date = new Date(y, m - 1, d);
+  const day = date.getDay();
+  const diff = (day === 0 ? -6 : 1) - day;
+  date.setDate(date.getDate() + diff);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export function getWeekLabel(weekStartStr: string): string {
+  const parts = weekStartStr.split('-');
+  if (parts.length !== 3) return weekStartStr;
+  const [y, m, d] = parts.map(Number);
+  const start = new Date(y, m - 1, d);
+  const end = new Date(y, m - 1, d + 6);
+  const mesInicio = MONTHS_ES[start.getMonth()];
+  const mesFin = MONTHS_ES[end.getMonth()];
+  if (start.getMonth() === end.getMonth()) {
+    return `${start.getDate()} - ${end.getDate()} ${mesInicio}`;
+  }
+  return `${start.getDate()} ${mesInicio} - ${end.getDate()} ${mesFin}`;
+}
+
+export function getMonthLabel(monthKey: string): string {
+  const parts = monthKey.split('-');
+  if (parts.length !== 2) return monthKey;
+  const [y, m] = parts.map(Number);
+  return `${MONTHS_ES[m - 1]} ${y}`;
+}
