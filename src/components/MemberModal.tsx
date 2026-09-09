@@ -44,12 +44,14 @@ export default function MemberModal({ isOpen, onClose, onSaved, preselectedAlumn
   const [foundAlumnoId, setFoundAlumnoId] = useState<string | null>(null);
   const [checkingPhone, setCheckingPhone] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savedData, setSavedData] = useState<{ phone: string; startDate: string; endDate: string; firstName: string } | null>(null);
   // Sugerencias de nombre
   const [nameSuggestions, setNameSuggestions] = useState<{ id: string; firstName: string; lastName: string | null; phone: string | null; dni: string | null }[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
+    setSavedData(null);
     setAmountTouched(false);
     if (preselectedAlumno) {
       const plan = preselectedAlumno.lastPlan || initialPlan;
@@ -155,7 +157,12 @@ export default function MemberModal({ isOpen, onClose, onSaved, preselectedAlumn
       if (mErr) throw mErr;
 
       onSaved();
-      onClose();
+      // Si tiene celular, guardamos los datos para mostrar el botón de WhatsApp
+      if (formData.phone.trim()) {
+        setSavedData({ phone: formData.phone.trim(), startDate: formData.startDate, endDate: computedEndDate, firstName: formData.firstName });
+      } else {
+        onClose();
+      }
     } catch (err) {
       console.error('Error guardando matrícula:', err);
       alert('No se pudo guardar la matrícula. Revisa los datos e intenta de nuevo.');
@@ -164,7 +171,40 @@ export default function MemberModal({ isOpen, onClose, onSaved, preselectedAlumn
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen && !savedData) return null;
+
+  // Pantalla de éxito con botón de WhatsApp
+  if (savedData) {
+    const msg = `Hola ${savedData.firstName}! 👋 Te recordamos que tu plan en *Forza Gym Club* inició el *${formatFriendlyDate(savedData.startDate)}* y finaliza el *${formatFriendlyDate(savedData.endDate)}*.\n\nAtt. ForzaGymClub\n_Cada día es un nuevo comienzo!_ ¡Te esperamos! 💪`;
+    const waUrl = `https://wa.me/51${savedData.phone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+        <motion.div initial={{opacity:0,scale:0.9,y:20}} animate={{opacity:1,scale:1,y:0}}
+          className="w-full max-w-sm bg-black/90 border border-zinc-800 rounded-[2.5rem] p-8 shadow-2xl backdrop-blur-2xl text-center space-y-6">
+          <div className="flex flex-col items-center gap-3">
+            <div className="text-5xl">🎉</div>
+            <h2 className="text-xl font-black text-white uppercase">¡Matrícula registrada!</h2>
+            <p className="text-sm text-zinc-400">¿Deseas enviar un mensaje de confirmación a <strong className="text-white">{savedData.firstName}</strong>?</p>
+          </div>
+          <div className="bg-zinc-900/80 border border-zinc-800 rounded-2xl p-4 text-left text-xs text-zinc-400 leading-relaxed">
+            Hola {savedData.firstName}! 👋 Tu plan inició el <span className="text-white">{formatFriendlyDate(savedData.startDate)}</span> y finaliza el <span className="text-white">{formatFriendlyDate(savedData.endDate)}</span>.{' '}
+            Att. ForzaGymClub — ¡Cada día es un nuevo comienzo! 💪
+          </div>
+          <div className="flex flex-col gap-3">
+            <a href={waUrl} target="_blank" rel="noopener noreferrer"
+              className="w-full py-4 bg-[#25D366] text-white font-black uppercase text-sm rounded-2xl hover:bg-[#20BA5A] transition-all flex items-center justify-center gap-2 active:scale-95">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.890-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              Enviar por WhatsApp
+            </a>
+            <button onClick={() => { setSavedData(null); onClose(); }}
+              className="w-full py-3 text-zinc-500 hover:text-white text-xs font-bold uppercase bg-zinc-800/50 rounded-xl transition-all">
+              Omitir y cerrar
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <AnimatePresence>
