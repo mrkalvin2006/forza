@@ -64,6 +64,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         startDate: m.start_date,
         endDate: m.end_date,
         amount: m.amount,
+        observation: m.observation || null,
         firstName: a.first_name || '(eliminado)',
         lastName: a.last_name || '',
         dni: a.dni || '',
@@ -100,7 +101,10 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     total: alumnos.length,
     active: alumnos.filter((a) => a.lastEndDate && getDaysRemaining(a.lastEndDate) >= 0).length,
     expired: alumnos.filter((a) => !a.lastEndDate || getDaysRemaining(a.lastEndDate) < 0).length,
-    totalRecaudado: matriculas.reduce((sum, m) => sum + (m.amount || 0), 0),
+    // Punto 9: total recaudado solo del mes actual
+    totalRecaudado: matriculas
+      .filter((m) => m.startDate.slice(0, 7) === getTodayString().slice(0, 7))
+      .reduce((sum, m) => sum + (Number(m.amount) || 0), 0),
   };
 
   // --- Flujo de Caja ---
@@ -112,33 +116,42 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const cajaSemana = matriculas.filter((m) => getWeekStart(m.startDate) === weekStartToday).reduce((s, m) => s + Number(m.amount || 0), 0);
   const cajaMes = matriculas.filter((m) => m.startDate.slice(0, 7) === monthKeyToday).reduce((s, m) => s + Number(m.amount || 0), 0);
 
+  // Punto 2: caja en orden de fecha más reciente primero (ya está por .sort desc)
   const cajaGroups = (() => {
     const map = new Map<string, { total: number; count: number }>();
     matriculas.forEach((m) => {
-      const key = cajaPeriod === 'daily' ? m.startDate : cajaPeriod === 'weekly' ? getWeekStart(m.startDate) : m.startDate.slice(0, 7);
+      const key = cajaPeriod === 'daily'
+        ? m.startDate
+        : cajaPeriod === 'weekly'
+          ? getWeekStart(m.startDate)
+          : m.startDate.slice(0, 7);
       const cur = map.get(key) || { total: 0, count: 0 };
       cur.total += Number(m.amount || 0);
       cur.count += 1;
       map.set(key, cur);
     });
+    // Punto 2: más reciente primero tanto en diario como mensual
     return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   })();
 
   const cajaLabel = (key: string) => (cajaPeriod === 'daily' ? formatFriendlyDate(key) : cajaPeriod === 'weekly' ? getWeekLabel(key) : getMonthLabel(key));
 
+  // Punto 8: lista de matrículas del mes actual
+  const matriculasMesActual = matriculas.filter((m) => m.startDate.slice(0, 7) === monthKeyToday);
+
   const filteredAlumnos = alumnos.filter((a) => {
-    const fullName = `${a.firstName} ${a.lastName || ''} ${a.phone || ''}`.toLowerCase();
-    const matchesSearch = fullName.includes(searchTerm.toLowerCase());
-    if (!matchesSearch) return false;
+    const q = `${a.firstName} ${a.lastName || ''} ${a.phone || ''} ${a.dni || ''}`.toLowerCase();
+    if (!q.includes(searchTerm.toLowerCase())) return false;
     const days = a.lastEndDate ? getDaysRemaining(a.lastEndDate) : -Infinity;
     if (filter === 'nextMonth') return days >= 0 && days <= 30;
     if (filter === 'expired') return days < 0;
     return true;
   });
 
+  // Punto 1: matrículas ordenadas de más reciente a más antigua (ya vienen así del fetch)
   const filteredMatriculas = matriculas.filter((m) => {
-    const fullName = `${m.firstName} ${m.lastName || ''} ${m.dni || ''}`.toLowerCase();
-    return fullName.includes(searchTerm.toLowerCase());
+    const q = `${m.firstName} ${m.lastName || ''} ${m.dni || ''}`.toLowerCase();
+    return q.includes(searchTerm.toLowerCase());
   });
 
   return (
@@ -226,6 +239,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
               <div>
                 <p className="text-xs font-black text-yellow-500 uppercase tracking-widest">Total Recaudado</p>
                 <p className="text-2xl font-bold">{isLoading ? '...' : `S/ ${stats.totalRecaudado.toFixed(2)}`}</p>
+                <p className="text-[10px] text-zinc-600 mt-1">Este mes</p>
               </div>
             </div>
           </div>
@@ -306,6 +320,41 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           </div>
         )}
 
+          {/* Punto 8: Lista de matrículas del mes actual, dentro de la vista caja */}
+          {view === 'caja' && (
+          <div className="mt-8 space-y-4">
+            <div className="flex items-center gap-2 text-zinc-400 text-xs font-black uppercase tracking-widest">
+              <History size={16} className="text-yellow-500" /> Matrículas de este mes ({matriculasMesActual.length})
+            </div>
+            <div className="bg-zinc-900/20 border border-zinc-800 rounded-[2rem] overflow-hidden backdrop-blur-md">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] border-b border-zinc-800/50">
+                    <th className="px-6 py-5">Alumno</th>
+                    <th className="px-6 py-5">Plan</th>
+                    <th className="px-6 py-5">Inicio</th>
+                    <th className="px-6 py-5">Fin</th>
+                    <th className="px-6 py-5 text-right">Monto</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/30">
+                  {matriculasMesActual.length === 0 ? (
+                    <tr><td colSpan={5} className="py-12 text-center text-zinc-600 font-bold uppercase text-xs">Sin matrículas este mes</td></tr>
+                  ) : matriculasMesActual.map((m) => (
+                    <tr key={m.id} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-4 font-bold text-white text-sm">{m.firstName} {m.lastName || ''}</td>
+                      <td className="px-6 py-4"><span className="bg-zinc-800 px-2 py-1 rounded-lg text-[10px] font-black uppercase border border-zinc-700">{PLAN_DETAILS[m.plan]?.label}</span></td>
+                      <td className="px-6 py-4 text-xs text-zinc-400">{formatFriendlyDate(m.startDate)}</td>
+                      <td className="px-6 py-4 text-xs text-white font-bold">{formatFriendlyDate(m.endDate)}</td>
+                      <td className="px-6 py-4 text-right text-yellow-500 font-black text-sm">S/ {Number(m.amount || 0).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          )}
+
         {view !== 'caja' && (
 
         <div className="bg-zinc-900/20 border border-zinc-800 rounded-[2rem] overflow-hidden backdrop-blur-md shadow-[0_10px_40px_rgba(0,0,0,0.2)] relative">
@@ -370,6 +419,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                     <th className="px-8 py-6">Inicio</th>
                     <th className="px-8 py-6">Fin</th>
                     <th className="px-8 py-6">Monto</th>
+                    <th className="px-8 py-6">Obs.</th>
                     <th className="px-8 py-6 text-right">Gestión</th>
                   </tr>
                 </thead>
@@ -385,6 +435,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                       <td className="px-8 py-6 text-sm text-zinc-400">{formatFriendlyDate(m.startDate)}</td>
                       <td className="px-8 py-6 text-sm text-white font-bold">{formatFriendlyDate(m.endDate)}</td>
                       <td className="px-8 py-6 text-sm text-yellow-500 font-black">S/ {Number(m.amount || 0).toFixed(2)}</td>
+                      <td className="px-8 py-6 text-xs text-zinc-500 max-w-[140px] truncate" title={m.observation || ''}>{m.observation || '—'}</td>
                       <td className="px-8 py-6 text-right relative">
                         <div className="flex justify-end gap-3 opacity-40 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => setDeleteMatricula(m)} title="Eliminar matrícula" className="p-2.5 text-red-400 hover:bg-red-500/10 rounded-xl transition-all"><Trash2 size={18} /></button>
