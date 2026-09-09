@@ -1,7 +1,7 @@
 // src/components/Dashboard.tsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Plus, Trash2, MessageCircle, LogOut, Users, AlertTriangle, ShieldCheck, History, Wallet } from 'lucide-react';
+import { Search, Plus, Trash2, MessageCircle, LogOut, Users, AlertTriangle, ShieldCheck, History, Wallet, Pencil } from 'lucide-react';
 import { AlumnoConEstado, MatriculaConAlumno, PLAN_DETAILS } from '../types';
 import { generateWhatsAppLink, getDaysRemaining, formatFriendlyDate, getTodayString, getMonthLabel } from '../utils';
 import MemberModal from './MemberModal';
@@ -21,6 +21,11 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [isLoading, setIsLoading] = useState(true);
   const [deleteAlumno, setDeleteAlumno] = useState<AlumnoConEstado | null>(null);
   const [deleteMatricula, setDeleteMatricula] = useState<MatriculaConAlumno | null>(null);
+  const [editingMatricula, setEditingMatricula] = useState<MatriculaConAlumno | null>(null);
+  const [editForm, setEditForm] = useState<{
+    firstName: string; lastName: string; phone: string; dni: string;
+    plan: string; startDate: string; endDate: string; amount: string; observation: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -94,6 +99,48 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       setDeleteMatricula(null);
       fetchData();
     }
+  };
+
+  const openEditMatricula = (m: MatriculaConAlumno) => {
+    setEditingMatricula(m);
+    setEditForm({
+      firstName: m.firstName,
+      lastName: m.lastName || '',
+      phone: '', // lo cargamos del alumno
+      dni: m.dni || '',
+      plan: m.plan,
+      startDate: m.startDate,
+      endDate: m.endDate,
+      amount: String(m.amount || ''),
+      observation: m.observation || '',
+    });
+    // Cargar teléfono real del alumno desde la lista
+    const alumno = alumnos.find((a) => a.id === m.alumnoId);
+    if (alumno) {
+      setEditForm((prev) => prev ? ({ ...prev, phone: alumno.phone || '', dni: alumno.dni || '' }) : prev);
+    }
+  };
+
+  const saveEditMatricula = async () => {
+    if (!editingMatricula || !editForm) return;
+    // Actualizar datos del alumno
+    await supabase.from('alumnos').update({
+      first_name: editForm.firstName,
+      last_name: editForm.lastName.trim() || null,
+      phone: editForm.phone.trim() || null,
+      dni: editForm.dni.trim() || null,
+    }).eq('id', editingMatricula.alumnoId);
+    // Actualizar datos de la matrícula
+    await supabase.from('matriculas').update({
+      plan: editForm.plan,
+      start_date: editForm.startDate,
+      end_date: editForm.endDate,
+      amount: parseFloat(editForm.amount) || 0,
+      observation: editForm.observation.trim() || null,
+    }).eq('id', editingMatricula.id);
+    setEditingMatricula(null);
+    setEditForm(null);
+    fetchData();
   };
 
   const stats = {
@@ -436,6 +483,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                       <td className="px-8 py-6 text-xs text-zinc-500 max-w-[140px] truncate" title={m.observation || ''}>{m.observation || '—'}</td>
                       <td className="px-8 py-6 text-right relative">
                         <div className="flex justify-end gap-3 opacity-40 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => openEditMatricula(m)} title="Modificar matrícula" className="p-2.5 text-blue-400 hover:bg-blue-500/10 rounded-xl transition-all"><Pencil size={18} /></button>
                           <button onClick={() => setDeleteMatricula(m)} title="Eliminar matrícula" className="p-2.5 text-red-400 hover:bg-red-500/10 rounded-xl transition-all"><Trash2 size={18} /></button>
                         </div>
                       </td>
@@ -491,6 +539,156 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                   <button onClick={() => setDeleteMatricula(null)} className="w-full py-3 text-zinc-500 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest bg-zinc-800/50 rounded-xl">No, Cancelar</button>
                   <button onClick={confirmDeleteMatricula} className="w-full py-3 bg-red-500 text-white font-black uppercase text-xs rounded-xl hover:bg-red-600 transition-all shadow-[0_0_20px_rgba(239,68,68,0.2)] active:scale-95 flex items-center justify-center gap-2">
                     <Trash2 size={16} />Sí, Eliminar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DE EDICIÓN DE MATRÍCULA */}
+      <AnimatePresence>
+        {editingMatricula && editForm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 30 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 30 }}
+              className="w-full max-w-lg bg-black/90 border border-zinc-800 rounded-[2.5rem] shadow-2xl backdrop-blur-2xl max-h-[90vh] overflow-y-auto"
+            >
+              {/* Header */}
+              <div className="flex justify-between items-center p-8 border-b border-zinc-800/50 sticky top-0 bg-black/80 backdrop-blur-xl z-10">
+                <h2 className="text-xl font-black text-white uppercase tracking-tighter flex items-center gap-3">
+                  <Pencil className="text-blue-400" size={22} />
+                  Modificar Matrícula
+                </h2>
+                <button onClick={() => { setEditingMatricula(null); setEditForm(null); }} className="text-zinc-500 hover:text-white transition-colors p-2 rounded-full">
+                  <Search size={20} className="rotate-45" />
+                </button>
+              </div>
+
+              <div className="p-8 space-y-6">
+                {/* DATOS DEL ALUMNO */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 border-l-4 border-yellow-500 pl-3">
+                    <h3 className="text-sm font-black text-yellow-500 uppercase tracking-widest">Datos del Alumno</h3>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Nombre *</label>
+                      <input
+                        required type="text"
+                        value={editForm.firstName}
+                        onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                        className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none focus:border-yellow-500/50 transition-all"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Apellido</label>
+                      <input
+                        type="text"
+                        value={editForm.lastName}
+                        onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                        className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none focus:border-yellow-500/50 transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Celular</label>
+                      <input
+                        type="tel" maxLength={9}
+                        value={editForm.phone}
+                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none focus:border-yellow-500/50 transition-all"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">DNI</label>
+                      <input
+                        type="text" maxLength={8}
+                        value={editForm.dni}
+                        onChange={(e) => setEditForm({ ...editForm, dni: e.target.value })}
+                        className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none focus:border-yellow-500/50 transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* DATOS DE LA MATRÍCULA */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 border-l-4 border-emerald-500 pl-3">
+                    <h3 className="text-sm font-black text-emerald-500 uppercase tracking-widest">Datos de la Matrícula</h3>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Plan</label>
+                    <select
+                      value={editForm.plan}
+                      onChange={(e) => setEditForm({ ...editForm, plan: e.target.value })}
+                      className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none focus:border-yellow-500/50 transition-all appearance-none font-bold"
+                    >
+                      {Object.entries(PLAN_DETAILS).map(([key, d]) => (
+                        <option key={key} value={key}>{d.label} — S/{d.price}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Fecha Inicio</label>
+                      <input
+                        type="date"
+                        value={editForm.startDate}
+                        onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                        className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500/50 transition-all [color-scheme:dark]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Fecha Fin</label>
+                      <input
+                        type="date"
+                        value={editForm.endDate}
+                        onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                        className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none focus:border-emerald-500/50 transition-all [color-scheme:dark]"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Monto S/</label>
+                    <input
+                      type="number" min="0" step="0.01"
+                      value={editForm.amount}
+                      onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                      className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none focus:border-yellow-500/50 transition-all font-bold"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Observación</label>
+                    <textarea
+                      rows={2}
+                      value={editForm.observation}
+                      onChange={(e) => setEditForm({ ...editForm, observation: e.target.value })}
+                      className="w-full px-4 py-3 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none focus:border-yellow-500/50 transition-all resize-none"
+                      placeholder="Descuento, motivo, nota... (opcional)"
+                    />
+                  </div>
+                </div>
+
+                {/* BOTONES */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => { setEditingMatricula(null); setEditForm(null); }}
+                    className="w-full py-3 text-zinc-500 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest bg-zinc-800/50 rounded-xl"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveEditMatricula}
+                    className="w-full py-3 bg-blue-500 text-white font-black uppercase text-xs rounded-xl hover:bg-blue-400 transition-all shadow-[0_0_20px_rgba(59,130,246,0.2)] active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <Pencil size={16} /> Guardar Cambios
                   </button>
                 </div>
               </div>
