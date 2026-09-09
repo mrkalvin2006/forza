@@ -44,6 +44,9 @@ export default function MemberModal({ isOpen, onClose, onSaved, preselectedAlumn
   const [foundAlumnoId, setFoundAlumnoId] = useState<string | null>(null);
   const [checkingPhone, setCheckingPhone] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Sugerencias de nombre
+  const [nameSuggestions, setNameSuggestions] = useState<{ id: string; firstName: string; lastName: string | null; phone: string | null; dni: string | null }[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -77,6 +80,33 @@ export default function MemberModal({ isOpen, onClose, onSaved, preselectedAlumn
   useEffect(() => {
     setComputedEndDate(calculateEndDate(formData.startDate, formData.plan));
   }, [formData.startDate, formData.plan]);
+
+  // Busca sugerencias de alumno por nombre (mínimo 2 caracteres)
+  const handleNameChange = async (val: string) => {
+    setFormData((prev) => ({ ...prev, firstName: val }));
+    if (preselectedAlumno || foundAlumnoId) return;
+    if (val.trim().length < 2) { setNameSuggestions([]); setShowSuggestions(false); return; }
+    const { data } = await supabase
+      .from('alumnos')
+      .select('id, first_name, last_name, phone, dni')
+      .ilike('first_name', `%${val.trim()}%`)
+      .limit(6);
+    if (data && data.length > 0) {
+      setNameSuggestions(data.map((d: any) => ({ id: d.id, firstName: d.first_name, lastName: d.last_name, phone: d.phone, dni: d.dni })));
+      setShowSuggestions(true);
+    } else {
+      setNameSuggestions([]);
+      setShowSuggestions(false);
+    }
+  };
+
+  // Al seleccionar una sugerencia, precarga todos los datos del alumno
+  const selectSuggestion = (s: typeof nameSuggestions[0]) => {
+    setFoundAlumnoId(s.id);
+    setFormData((prev) => ({ ...prev, firstName: s.firstName, lastName: s.lastName || '', phone: s.phone || '', dni: s.dni || '' }));
+    setNameSuggestions([]);
+    setShowSuggestions(false);
+  };
 
   // Busca alumno existente por celular al salir del campo
   const handlePhoneBlur = async () => {
@@ -163,15 +193,41 @@ export default function MemberModal({ isOpen, onClose, onSaved, preselectedAlumn
               </div>
 
               {/* Nombre (obligatorio) */}
-              <input
-                required
-                type="text"
-                value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                disabled={!!foundAlumnoId}
-                className="w-full px-4 py-3.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none disabled:opacity-60 focus:border-yellow-500/50 transition-all"
-                placeholder="Nombre *"
-              />
+              <div className="relative">
+                <input
+                  required
+                  type="text"
+                  value={formData.firstName}
+                  onChange={(e) => handleNameChange(e.target.value)}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  onFocus={() => nameSuggestions.length > 0 && setShowSuggestions(true)}
+                  disabled={!!foundAlumnoId}
+                  className="w-full px-4 py-3.5 bg-zinc-900 border border-zinc-800 rounded-xl text-white outline-none disabled:opacity-60 focus:border-yellow-500/50 transition-all"
+                  placeholder="Nombre *"
+                  autoComplete="off"
+                />
+                {/* Dropdown de sugerencias */}
+                {showSuggestions && nameSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-zinc-900 border border-zinc-700 rounded-xl overflow-hidden shadow-2xl">
+                    {nameSuggestions.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onMouseDown={() => selectSuggestion(s)}
+                        className="w-full px-4 py-3 text-left hover:bg-zinc-800 transition-colors flex items-center justify-between gap-2 border-b border-zinc-800/50 last:border-0"
+                      >
+                        <span className="text-white font-bold text-sm">{s.firstName} {s.lastName || ''}</span>
+                        <span className="text-zinc-500 text-xs">{s.phone || s.dni || ''}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {foundAlumnoId && !preselectedAlumno && (
+                  <p className="text-xs text-emerald-400 mt-1 ml-1 flex items-center gap-1">
+                    <CheckCircle2 size={14} /> Alumno encontrado — se agregará matrícula nueva
+                  </p>
+                )}
+              </div>
 
               {/* Apellido (opcional) */}
               <input
@@ -213,11 +269,6 @@ export default function MemberModal({ isOpen, onClose, onSaved, preselectedAlumn
                   />
                 </div>
                 {checkingPhone && <p className="text-xs text-zinc-500 mt-1 ml-1">Buscando...</p>}
-                {foundAlumnoId && !preselectedAlumno && (
-                  <p className="text-xs text-emerald-400 mt-1 ml-1 flex items-center gap-1">
-                    <CheckCircle2 size={14} /> Alumno encontrado — se agregará matrícula nueva
-                  </p>
-                )}
               </div>
             </div>
 

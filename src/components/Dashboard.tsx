@@ -1,9 +1,9 @@
 // src/components/Dashboard.tsx
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, Plus, Trash2, MessageCircle, LogOut, Users, AlertTriangle, ShieldCheck, History, Wallet, CalendarRange } from 'lucide-react';
+import { Search, Plus, Trash2, MessageCircle, LogOut, Users, AlertTriangle, ShieldCheck, History, Wallet } from 'lucide-react';
 import { AlumnoConEstado, MatriculaConAlumno, PLAN_DETAILS } from '../types';
-import { generateWhatsAppLink, getDaysRemaining, formatFriendlyDate, getTodayString, getWeekStart, getWeekLabel, getMonthLabel } from '../utils';
+import { generateWhatsAppLink, getDaysRemaining, formatFriendlyDate, getTodayString, getMonthLabel } from '../utils';
 import MemberModal from './MemberModal';
 import { supabase } from '../supabase';
 
@@ -14,7 +14,6 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [alumnos, setAlumnos] = useState<AlumnoConEstado[]>([]);
   const [matriculas, setMatriculas] = useState<MatriculaConAlumno[]>([]);
   const [view, setView] = useState<'alumnos' | 'matriculas' | 'caja'>('alumnos');
-  const [cajaPeriod, setCajaPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState<'all' | 'nextMonth' | 'expired'>('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -107,34 +106,37 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
       .reduce((sum, m) => sum + (Number(m.amount) || 0), 0),
   };
 
-  // --- Flujo de Caja ---
   const todayStr = getTodayString();
-  const weekStartToday = getWeekStart(todayStr);
   const monthKeyToday = todayStr.slice(0, 7);
 
   const cajaHoy = matriculas.filter((m) => m.startDate === todayStr).reduce((s, m) => s + Number(m.amount || 0), 0);
-  const cajaSemana = matriculas.filter((m) => getWeekStart(m.startDate) === weekStartToday).reduce((s, m) => s + Number(m.amount || 0), 0);
+  const cajaSemana = matriculas.filter((m) => {
+    // semana actual: lunes a sábado (6 días)
+    const parts = todayStr.split('-').map(Number);
+    const today = new Date(parts[0], parts[1] - 1, parts[2]);
+    const dayOfWeek = today.getDay(); // 0=dom
+    const diffToMon = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + diffToMon);
+    const saturday = new Date(monday);
+    saturday.setDate(monday.getDate() + 5);
+    const mDate = new Date(m.startDate);
+    return mDate >= monday && mDate <= saturday;
+  }).reduce((s, m) => s + Number(m.amount || 0), 0);
   const cajaMes = matriculas.filter((m) => m.startDate.slice(0, 7) === monthKeyToday).reduce((s, m) => s + Number(m.amount || 0), 0);
 
-  // Punto 2: caja en orden de fecha más reciente primero (ya está por .sort desc)
-  const cajaGroups = (() => {
+  // Historial mensual: agrupar todas las matrículas por mes, más reciente primero
+  const cajaHistorialMensual = (() => {
     const map = new Map<string, { total: number; count: number }>();
     matriculas.forEach((m) => {
-      const key = cajaPeriod === 'daily'
-        ? m.startDate
-        : cajaPeriod === 'weekly'
-          ? getWeekStart(m.startDate)
-          : m.startDate.slice(0, 7);
+      const key = m.startDate.slice(0, 7);
       const cur = map.get(key) || { total: 0, count: 0 };
       cur.total += Number(m.amount || 0);
       cur.count += 1;
       map.set(key, cur);
     });
-    // Punto 2: más reciente primero tanto en diario como mensual
     return Array.from(map.entries()).sort((a, b) => b[0].localeCompare(a[0]));
   })();
-
-  const cajaLabel = (key: string) => (cajaPeriod === 'daily' ? formatFriendlyDate(key) : cajaPeriod === 'weekly' ? getWeekLabel(key) : getMonthLabel(key));
 
   // Punto 8: lista de matrículas del mes actual
   const matriculasMesActual = matriculas.filter((m) => m.startDate.slice(0, 7) === monthKeyToday);
@@ -282,15 +284,8 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-zinc-400 text-xs font-black uppercase tracking-widest">
-                <CalendarRange size={16} className="text-yellow-500" /> Historial por período
-              </div>
-              <div className="flex gap-2 bg-zinc-900/80 p-1.5 rounded-2xl border border-zinc-800">
-                <button onClick={() => setCajaPeriod('daily')} className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-tighter transition-all ${cajaPeriod === 'daily' ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>Diario</button>
-                <button onClick={() => setCajaPeriod('weekly')} className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-tighter transition-all ${cajaPeriod === 'weekly' ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>Semanal</button>
-                <button onClick={() => setCajaPeriod('monthly')} className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-tighter transition-all ${cajaPeriod === 'monthly' ? 'bg-white text-black' : 'text-zinc-500 hover:text-white'}`}>Mensual</button>
-              </div>
+            <div className="flex items-center gap-2 text-zinc-400 text-xs font-black uppercase tracking-widest">
+              <Wallet size={16} className="text-yellow-500" /> Historial Mensual
             </div>
 
             <div className="bg-zinc-900/20 border border-zinc-800 rounded-[2rem] overflow-hidden backdrop-blur-md">
@@ -305,11 +300,14 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
                 <tbody className="divide-y divide-zinc-800/30">
                   {isLoading ? (
                     <tr><td colSpan={3} className="py-20 text-center text-zinc-600 font-bold uppercase animate-pulse">Sincronizando base de datos...</td></tr>
-                  ) : cajaGroups.length === 0 ? (
+                  ) : cajaHistorialMensual.length === 0 ? (
                     <tr><td colSpan={3} className="py-20 text-center text-zinc-600 font-bold uppercase">Sin matrículas registradas</td></tr>
-                  ) : cajaGroups.map(([key, { total, count }]) => (
-                    <tr key={key} className="hover:bg-white/[0.02] transition-colors">
-                      <td className="px-8 py-6 font-bold text-white capitalize">{cajaLabel(key)}</td>
+                  ) : cajaHistorialMensual.map(([key, { total, count }]) => (
+                    <tr key={key} className={`hover:bg-white/[0.02] transition-colors ${key === monthKeyToday ? 'bg-yellow-500/5' : ''}`}>
+                      <td className="px-8 py-6 font-bold text-white capitalize flex items-center gap-2">
+                        {getMonthLabel(key)}
+                        {key === monthKeyToday && <span className="text-[9px] bg-yellow-500 text-black font-black px-2 py-0.5 rounded-full uppercase">Actual</span>}
+                      </td>
                       <td className="px-8 py-6 text-zinc-400">{count}</td>
                       <td className="px-8 py-6 text-right text-yellow-500 font-black">S/ {total.toFixed(2)}</td>
                     </tr>
