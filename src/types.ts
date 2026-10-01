@@ -46,3 +46,21 @@ export const PLAN_DETAILS: Record<PlanType, { label: string; price: number; dura
   '3_months':    { label: '3 Meses',     price: 400, durationMonths: 3 },
   '5_months':    { label: '5 Meses',     price: 570, durationMonths: 5 },
 };
+
+// Sesión libre: ingreso puntual sin membresía
+export interface SesionLibre {
+  id: string;
+  description: string;
+  amount: number;
+  sessionDate: string;
+  createdAt: string;
+}
+
+// Roles de usuario
+export type UserRole = 'admin' | 'asesor';
+
+export interface ForzaUser {
+  id: string;
+  username: string;
+  role: UserRole;
+}
